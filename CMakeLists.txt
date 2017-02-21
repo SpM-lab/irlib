@@ -18,9 +18,11 @@ message(STATUS "Redifine CMAKE_INSTALL_PREFIX if you wish to change install loca
 ### Dependencies
 find_package(Boost 1.55.0 REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(GSL REQUIRED)
+find_package(LAPACK REQUIRED)
 
 #include directories
-set(IRBASIS_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${Boost_INCLUDE_DIRS} "ir_basis/include" "test") #rest taken care of by libraries dependencies
+set(IRBASIS_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${Boost_INCLUDE_DIRS} ${GSL_INCLUDE_DIRS} ${GSLCBLAS_INCLUDE_DIRS}  "ir_basis/include" "test") #rest taken care of by libraries dependencies
 
 # Build and enable tests
 #testing setup
@@ -29,7 +31,9 @@ include(EnableGtests) #defined in ./cmake
 #include_directories("test")
 message(${IRBASIS_LIBRARY_INCLUDE_DIRS})
 include_directories(${IRBASIS_LIBRARY_INCLUDE_DIRS})
-#list(APPEND LINK_ALL hyb)
+list(APPEND LINK_ALL ${GSL_LIBRARIES} ${GSLCBLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${BLAS_LINKER_FLAGS} ${LAPACK_LINKER_FLAGS}" CACHE STRING "Linker flags for executables" FORCE)
 
 #testing source files
 set(unittest_src unittest)

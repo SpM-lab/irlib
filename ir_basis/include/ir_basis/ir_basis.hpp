@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include <boost/multi_array.hpp>
+#include <boost/type_traits.hpp>
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
@@ -14,16 +15,42 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
+extern "C" void dgesvd_( const char* jobu, const char* jobvt,
+                         const int* m, const int* n, double* a, const int* lda,
+                         double* s, double* u, const int* ldu,
+                         double* vt, const int* ldvt,
+                         double* work, const int* lwork, int* info);
+
+
 namespace ir {
+  template<typename T, int k>
+  class piecewise_polynomial;
 
   namespace detail {
-    template<typename T>
-    piecewise_polynomial<T, 3> construct_piecewise_polynomial_cspline(
-        const std::vector<double> &x_array, const std::vector<double> &y_array);
+    /**
+     *
+     * @tparam T double or std::complex<double>
+     * @param a  scalar
+     * @param b  scalar
+     * @return   conj(a) * b
+     */
+    template<class T>
+    typename boost::enable_if<boost::is_floating_point<T>, T>::type
+    outer_product(T a, T b) {
+      return a * b;
+    }
+
+    template<class T>
+    std::complex<T>
+    outer_product(const std::complex<T>& a, const std::complex<T>& b) {
+      return std::conj(a) * b;
+    }
   }
+
 
 /**
  * Class for representing a piecewise polynomial
+ *   A function is represented by a polynomial in each section [x_n, x_{n+1}).
  */
   template<typename T, int k>
   class piecewise_polynomial {
@@ -60,6 +87,12 @@ namespace ir {
       }
     }
 
+    void check_validity() const {
+      if (n_sections_ < 1) {
+        throw std::runtime_error("pieacewise_polynomial object is not properly constructed!");
+      }
+    }
+
    public:
     piecewise_polynomial() : n_sections_(0) {};
 
@@ -67,25 +100,52 @@ namespace ir {
                          const std::vector<double> &section_edges,
                          const boost::multi_array<T, 2> &coeff) : n_sections_(section_edges.size() - 1),
                                                                   section_edges_(section_edges),
-                                                                  coeff_(coeff) {};
+                                                                  coeff_(coeff) {
+      //FIXME: DO NOT THROW IN A CONSTRUCTOR
+      if (n_section < 1) {
+        std::runtime_error("n_section cannot be less than 1!");
+      }
+      if (section_edges.size() != n_section + 1) {
+        std::runtime_error("size of section_edges is wrong!");
+      }
+      if (coeff.shape()[0] != n_section) {
+        std::runtime_error("first dimension of coeff is wrong!");
+      }
+      if (coeff.shape()[1] != k+1) {
+        std::runtime_error("second dimension of coeff is wrong!");
+      }
+      for (int i = 0; i < n_section; ++i) {
+        if (section_edges[i] >= section_edges[i+1]) {
+          std::runtime_error("section_edges must be in strictly increasing order!");
+        }
+      }
+    };
 
     /// Number of sections
     int num_sections() const {
       return n_sections_;
     }
 
-    double section_edge(int i) const { return section_edges_[i]; }
+    double section_edge(int i) const {
+      assert(i >= 0 && i < section_edges_.size());
+      return section_edges_[i];
+    }
 
     /// Compute the value at x
-    T compute_value(double x) const {
-      check_range(x);
+    inline T compute_value(double x) const {
+      return compute_value(x, find_section(x));
+    }
 
-      const int sec = find_section(x);
+    /// Compute the value at x. x must be in the given section.
+    inline T compute_value(double x, int section) const {
+      if (x < section_edges_[section] || (x != section_edges_.back() && x >= section_edges_[section+1]) ) {
+        throw std::runtime_error("The given x is not in the given section.");
+      }
 
-      const double dx = x - section_edges_[sec];
+      const double dx = x - section_edges_[section];
       T r = 0.0, x_pow = 1.0;
       for (int p = 0; p < k + 1; ++p) {
-        r += coeff_[sec][p] * x_pow;
+        r += coeff_[section][p] * x_pow;
         x_pow *= dx;
       }
       return r;
@@ -93,16 +153,16 @@ namespace ir {
 
     /// Find the section involving the given x
     int find_section(double x) const {
-      //FIXME: make this O(1)
       if (x == section_edges_[0]) {
         return 0;
       } else if (x == section_edges_.back()) {
         return coeff_.size() - 1;
       }
+
       std::vector<double>::const_iterator it =
-          std::lower_bound(section_edges_.begin(), section_edges_.end(), x);
+          std::upper_bound(section_edges_.begin(), section_edges_.end(), x);
       --it;
-      return std::distance(section_edges_.begin(), it);//O(N)
+      return (&(*it) - &(section_edges_[0]));
     }
 
     /// Compute overlap <this | other> with complex conjugate
@@ -124,7 +184,7 @@ namespace ir {
 
         for (int p = 0; p < k + 1; ++p) {
           for (int p2 = 0; p2 < k2 + 1; ++p2) {
-            r += alps::numeric::outer_product(coeff_[s][p], other.coeff_[s][p2])
+            r += detail::outer_product(coeff_[s][p], other.coeff_[s][p2])
                 * dx_power[p + p2 + 1] / (p + p2 + 1.0);
           }
         }
@@ -177,7 +237,7 @@ namespace ir {
     return pp_copy;
   }
 
-/// Gram-Schmidt orthonormalization (This should result in Legendre polynomials)
+/// Gram-Schmidt orthonormalization
   template<typename T, int k>
   void orthonormalize(std::vector<piecewise_polynomial<T, k> > &pps) {
     typedef piecewise_polynomial<T, k> pp_type;
@@ -193,28 +253,105 @@ namespace ir {
     }
   }
 
+  template<typename T>// we expect T = double
+  piecewise_polynomial<T, 3> construct_piecewise_polynomial_cspline(
+      const std::vector<double> &x_array, const std::vector<double> &y_array) {
+
+    const int n_points = x_array.size();
+    const int n_section = n_points - 1;
+
+    boost::multi_array<double, 2> coeff(boost::extents[n_section][4]);
+
+    gsl_interp_accel *my_accel_ptr = gsl_interp_accel_alloc();
+    gsl_spline *my_spline_ptr = gsl_spline_alloc(gsl_interp_cspline, n_points);
+    gsl_spline_init(my_spline_ptr, &x_array[0], &y_array[0], n_points);
+
+    // perform spline interpolation
+    for (int s = 0; s < n_section; ++s) {
+      const double dx = x_array[s + 1] - x_array[s];
+      coeff[s][0] = y_array[s];
+      coeff[s][1] = gsl_spline_eval_deriv(my_spline_ptr, x_array[s], my_accel_ptr);
+      coeff[s][2] = 0.5 * gsl_spline_eval_deriv2(my_spline_ptr, x_array[s], my_accel_ptr);
+      coeff[s][3] =
+          (y_array[s + 1] - y_array[s] - coeff[s][1] * dx - coeff[s][2] * dx * dx) / (dx * dx * dx);//ugly hack
+      assert(
+          std::abs(
+              y_array[s + 1] - y_array[s] - coeff[s][1] * dx - coeff[s][2] * dx * dx - coeff[s][3] * dx * dx * dx)
+              < 1e-8
+      );
+    }
+
+    gsl_spline_free(my_spline_ptr);
+    gsl_interp_accel_free(my_accel_ptr);
+
+    return piecewise_polynomial<T, 3>(n_section, x_array, coeff);
+  };
+
+
+  /**
+   * Fermionic kernel
+   */
+  class FermionicKernel {
+   public:
+    FermionicKernel(double Lambda) : Lambda_(Lambda) {}
+
+    double operator()(double x, double y) const {
+      const double limit = 100.0;
+      if (Lambda_ * y > limit) {
+        return std::exp(-0.5*Lambda_*x*y - 0.5*Lambda_*y);
+      } else if (Lambda_ * y < -limit) {
+        return std::exp(-0.5*Lambda_*x*y + 0.5*Lambda_*y);
+      } else {
+        return std::exp(-0.5*Lambda_*x*y)/(2*std::cosh(0.5*Lambda_*y));
+      }
+    }
+
+   private:
+    double Lambda_;
+  };
+
+  /**
+   * Bosonic kernel
+   */
+  class BosonicKernel {
+   public:
+    BosonicKernel(double Lambda) : Lambda_(Lambda) {}
+
+    double operator()(double x, double y) const {
+      const double limit = 100.0;
+      if (std::abs(Lambda_*y) < 1e-10) {
+        return std::exp(-0.5*Lambda_*x*y);
+      } else if (Lambda_ * y > limit) {
+        return y*std::exp(-0.5*Lambda_*x*y - 0.5*Lambda_*y);
+      } else if (Lambda_ * y < -limit) {
+        return -y*std::exp(-0.5*Lambda_*x*y + 0.5*Lambda_*y);
+      } else {
+        return y*std::exp(-0.5*Lambda_*x*y)/(2*std::sinh(0.5*Lambda_*y));
+      }
+    }
+
+   private:
+    double Lambda_;
+  };
+
 /**
  * Class template for kernel Ir basis
  */
   template<typename Scalar, typename Kernel>
   class Basis {
    public:
-    Basis(double Lambda, int n_omega = 501, int n_tau = 501, double cutoff = 1e-10);
+    Basis(double Lambda, int N = 501, double cutoff = 1e-10);
 
    private:
-    typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
-    typedef alps::gf::piecewise_polynomial<double, 3> pp_type;
-
-    const double tmin_;
-    std::vector<double> tvec_, xvec_;
-    matrix_t U_, V_;
-    int dim_;
+    typedef piecewise_polynomial<double, 3> pp_type;
 
     std::vector<pp_type> basis_functions_;
 
    public:
     void value(double x, std::vector<double> &val) const;
     const pp_type &operator()(int l) const { return basis_functions_[l]; }
-    int dim() const { return dim_; }
+    int dim() const { return basis_functions_.size(); }
   };
 }
+
+#include "ir_basis.ipp"
