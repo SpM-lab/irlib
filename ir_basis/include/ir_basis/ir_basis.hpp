@@ -320,7 +320,7 @@ namespace ir {
     double operator()(double x, double y) const {
       const double limit = 100.0;
       if (std::abs(Lambda_*y) < 1e-10) {
-        return std::exp(-0.5*Lambda_*x*y);
+        return std::exp(-0.5*Lambda_*x*y)/Lambda_;
       } else if (Lambda_ * y > limit) {
         return y*std::exp(-0.5*Lambda_*x*y - 0.5*Lambda_*y);
       } else if (Lambda_ * y < -limit) {
@@ -352,6 +352,12 @@ namespace ir {
     const pp_type &operator()(int l) const { return basis_functions_[l]; }
     int dim() const { return basis_functions_.size(); }
   };
+
+  /**
+   * Typedefs for convenience
+   */
+  typedef Basis<double, FermionicKernel> FermionicBasis;
+  typedef Basis<double, BosonicKernel> BosonicBasis;
 }
 
 #include "ir_basis.ipp"
