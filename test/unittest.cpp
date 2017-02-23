@@ -88,7 +88,7 @@ TYPED_TEST_CASE(HighTTest, KernelTypes);
 TYPED_TEST(HighTTest, KernelTypes) {
   try {
     //construct ir basis
-    const double Lambda = 0.1;//high T
+    const double Lambda = 0.01;//high T
     ir::Basis<double,TypeParam> basis(Lambda);
     ASSERT_TRUE(basis.dim()>3);
 
@@ -120,6 +120,22 @@ TYPED_TEST(HighTTest, KernelTypes) {
         ASSERT_NEAR(basis(l).compute_value(x) + sign * basis(l).compute_value(-x), 0.0, 1e-8);
         sign *= -1;
       }
+    }
+
+    //check transformation matrix to Matsubara frequencies
+    if (TypeParam::statistics() == ir::fermionic) {
+      const int N_iw = 2;
+      boost::multi_array<std::complex<double>,2> Tnl_legendre(boost::extents[N_iw][3]);
+      compute_Tnl_legendre(N_iw, 3, Tnl_legendre);
+
+      for (int n = 0; n < N_iw; n++) {
+        std::vector<std::complex<double> > Tnl(basis.dim());
+        basis.compute_Tnl(n, Tnl);
+        for (int l = 0; l < 3; ++l) {
+         ASSERT_NEAR(std::abs(Tnl[l]/Tnl_legendre[n][l]-1.0), 0.0, 1e-5);
+        }
+      }
+
     }
 
   } catch (const std::exception& e) {

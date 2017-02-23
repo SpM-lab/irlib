@@ -8,6 +8,7 @@
 
 #include <boost/multi_array.hpp>
 #include <boost/type_traits.hpp>
+#include <boost/typeof/typeof.hpp>
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
@@ -25,6 +26,8 @@ extern "C" void dgesvd_( const char* jobu, const char* jobvt,
 namespace ir {
   template<typename T, int k>
   class piecewise_polynomial;
+
+  enum statistics {fermionic, bosonic};
 
   namespace detail {
     /**
@@ -45,6 +48,21 @@ namespace ir {
     outer_product(const std::complex<T>& a, const std::complex<T>& b) {
       return std::conj(a) * b;
     }
+
+    //template<class T1, int k1, class T2, int k2>
+    //void compute_transformation_matrix(
+        //const piecewise_polynomial<T1,k1>& bf_dst,
+        //const piecewise_polynomial<T2,k2>& bf_src,
+        //Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>& Tnl
+    //);
+
+    template<class T, int k>
+    void compute_transformation_matrix_to_matsubara(
+        int n,
+        statistics s,
+        const std::vector<piecewise_polynomial<T,k> >& bf_src,
+        std::vector<std::complex<double> >& Tnl
+    );
   }
 
 
@@ -67,6 +85,9 @@ namespace ir {
 
     template<typename TT, int kk>
     friend const piecewise_polynomial<TT, kk> operator*(TT scalar, const piecewise_polynomial<TT, kk> &pp);
+
+    template<typename TT, int kk>
+    friend class piecewise_polynomial;
 
     /// number of sections
     int n_sections_;
@@ -131,6 +152,10 @@ namespace ir {
       return section_edges_[i];
     }
 
+    const std::vector<double>& section_edges() const {
+      return section_edges_;
+    }
+
     /// Compute the value at x
     inline T compute_value(double x) const {
       return compute_value(x, find_section(x));
@@ -166,13 +191,14 @@ namespace ir {
     }
 
     /// Compute overlap <this | other> with complex conjugate
-    template<int k2>
-    T overlap(const piecewise_polynomial<T, k2> &other) {
+    template<class T2, int k2>
+    T overlap(const piecewise_polynomial<T2, k2> &other) const {
       if (section_edges_ != other.section_edges_) {
         throw std::runtime_error("Not supported");
       }
+      typedef BOOST_TYPEOF(T(1.0) * T2(1.0)) Tr;
 
-      T r = 0.0;
+      Tr r = 0.0;
       boost::array<double, k + k2 + 2> x_min_power, dx_power;
 
       for (int s = 0; s < n_sections_; ++s) {
@@ -184,7 +210,7 @@ namespace ir {
 
         for (int p = 0; p < k + 1; ++p) {
           for (int p2 = 0; p2 < k2 + 1; ++p2) {
-            r += detail::outer_product(coeff_[s][p], other.coeff_[s][p2])
+            r += detail::outer_product((Tr) coeff_[s][p], (Tr) other.coeff_[s][p2])
                 * dx_power[p + p2 + 1] / (p + p2 + 1.0);
           }
         }
@@ -306,6 +332,10 @@ namespace ir {
       }
     }
 
+    static statistics statistics() {
+      return fermionic;
+    }
+
    private:
     double Lambda_;
   };
@@ -330,6 +360,10 @@ namespace ir {
       }
     }
 
+    static statistics statistics() {
+      return bosonic;
+    }
+
    private:
     double Lambda_;
   };
@@ -351,6 +385,11 @@ namespace ir {
     void value(double x, std::vector<double> &val) const;
     const pp_type &operator()(int l) const { return basis_functions_[l]; }
     int dim() const { return basis_functions_.size(); }
+
+    void compute_Tnl(
+        int n,
+        std::vector<std::complex<double> >& Tnl
+    ) const;
   };
 
   /**
