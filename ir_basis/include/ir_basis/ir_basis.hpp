@@ -13,6 +13,8 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
 
+//#include <boost/timer/timer.hpp>
+
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
@@ -49,12 +51,17 @@ namespace ir {
       return std::conj(a) * b;
     }
 
-    //template<class T1, int k1, class T2, int k2>
-    //void compute_transformation_matrix(
-        //const piecewise_polynomial<T1,k1>& bf_dst,
-        //const piecewise_polynomial<T2,k2>& bf_src,
-        //Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>& Tnl
-    //);
+    template<class T>
+    typename boost::enable_if<boost::is_floating_point<T>, T>::type
+    conjg(T a) {
+      return a;
+    }
+
+    template<class T>
+    std::complex<T>
+    conjg(const std::complex<T>& a) {
+      return std::conj(a);
+    }
 
     template<class T, int k>
     void compute_transformation_matrix_to_matsubara(
@@ -147,13 +154,19 @@ namespace ir {
       return n_sections_;
     }
 
-    double section_edge(int i) const {
+    inline double section_edge(int i) const {
       assert(i >= 0 && i < section_edges_.size());
       return section_edges_[i];
     }
 
     const std::vector<double>& section_edges() const {
       return section_edges_;
+    }
+
+    inline T coefficient(int i, int p) const {
+      assert(i >= 0 && i < section_edges_.size());
+      assert(p >= 0 && p <= k);
+      return coeff_[i][p];
     }
 
     /// Compute the value at x
@@ -389,6 +402,11 @@ namespace ir {
     void compute_Tnl(
         int n,
         std::vector<std::complex<double> >& Tnl
+    ) const;
+
+    void compute_Tnl(
+        int n_min, int n_max,
+        boost::multi_array<std::complex<double>,2> & Tnl
     ) const;
   };
 

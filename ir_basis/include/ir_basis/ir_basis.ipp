@@ -41,40 +41,39 @@ namespace ir {
       }
     }
 
-    /**
-     * Compute transformation matrix between two basis sets
-     * @tparam T1  Scalar of dst basis
-     * @tparam k1  Order of piecewise polynomials representing dst basis functions
-     * @tparam T2  Scalar of src basis
-     * @tparam k2  Order of piecewise polynomials representing src basis functions
-     * @param bf_dst dst basis functions
-     * @param bf_src src basis functions
-     * @param Tnl   Results
-     */
-     /*
-    template<class T1, class k1, class T2, class k2>
-    void compute_transformation_matrix(
-        const piecewise_polynomial<T1,k1>& bf_dst,
-        const piecewise_polynomial<T2,k2>& bf_src,
-        Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>& Tnl
-    ) {
-      const int N_dst = bf_dst.size();
-      const int N_src = bf_src.size();
-      std::vector<double> norm2_dst(N_dst);
+    void construct_matsubra_basis_functions(
+        int n_min, int n_max,
+        statistics s,
+        const std::vector<double>& section_edges,
+        std::vector<piecewise_polynomial<std::complex<double>, 4> >& results) {
+      typedef piecewise_polynomial<std::complex<double>, 4> pp_type;
 
-      for (int n = 0; n < N_dst; ++n) {
-        norm2_dst[n] = static_cast<double>(bf_dst[n].overlap(bf_dst[n]));
-      }
+      const int k = 4;
+      const int N = section_edges.size() - 1;
 
-      Tnl.resize(N_dst, N_src);
-      for (int n = 0; n < N_dst; ++n) {
-        for (int l = 0; l < N_src; ++l) {
-          Tnl(n,l) = bf_dst[n].overlap(bf_src[l])/norm2_dst[n];
+      results.resize(0);
+
+      std::complex<double> z;
+      boost::multi_array<std::complex<double>,2> coeffs(boost::extents[N][k+1]);
+
+      for (int n = n_min; n <= n_max; ++n) {
+        if (s == fermionic) {
+          z = -std::complex<double>(0.0, n+0.5) * M_PI;
+        } else if (s == bosonic) {
+          z = -std::complex<double>(0.0, n) * M_PI;
         }
+        for (int section = 0; section < N; ++section) {
+          const double x =section_edges[section];
+          std::complex<double> exp0 = std::exp(z*(x+1));
+          coeffs[section][0] = exp0;
+          coeffs[section][1] = exp0*z;
+          coeffs[section][2] = exp0*z*z/2.0;
+          coeffs[section][3] = exp0*z*z*z/6.0;
+          coeffs[section][4] = exp0*z*z*z*z/24.0;
+        }
+        results.push_back(pp_type(N, section_edges, coeffs));
       }
-    };
-     */
-
+    }
 
     template<class T, int k>
     void compute_transformation_matrix_to_matsubara(
@@ -113,6 +112,23 @@ namespace ir {
       }
     };
 
+    template<class T, int k>
+    void compute_transformation_matrix_to_matsubara(
+        int n_min, int n_max,
+        statistics s,
+        const std::vector<piecewise_polynomial<T,k> >& bf_src,
+        boost::multi_array<std::complex<double>,2> & Tnl
+    ) {
+      typedef piecewise_polynomial<std::complex<double>, 4> pp_type;
+      std::vector<pp_type> matsubara_functions;
+
+      construct_matsubra_basis_functions(n_min, n_max, s, bf_src[0].section_edges(), matsubara_functions);
+      compute_overlap(matsubara_functions, bf_src, Tnl);
+      std::transform(Tnl.origin(), Tnl.origin()+Tnl.num_elements(),
+        Tnl.origin(),
+        std::bind1st(std::multiplies<std::complex<double> >(),1/std::sqrt(2.0))
+      );
+    }
   }//namespace detail
 
   template<typename Kernel>
@@ -271,4 +287,90 @@ namespace ir {
   ) const {
     detail::compute_transformation_matrix_to_matsubara<double,3>(n, Kernel::statistics(), basis_functions_, Tnl);
   };
+
+  template<typename Scalar, typename Kernel>
+  void
+  Basis<Scalar,Kernel>::compute_Tnl(
+    int n_min, int n_max,
+    boost::multi_array<std::complex<double>,2> & Tnl
+  ) const {
+    detail::compute_transformation_matrix_to_matsubara<double,3>(n_min, n_max, Kernel::statistics(), basis_functions_, Tnl);
+  };
+
+  /// Compute overlap <left | right> with complex conjugate
+  template<class T1, int k1, class T2, int k2>
+  void compute_overlap(
+      const std::vector<piecewise_polynomial<T1, k1> >& left_vectors,
+      const std::vector<piecewise_polynomial<T2, k2> >& right_vectors,
+      boost::multi_array<BOOST_TYPEOF(T1(1.0) * T2(1.0)), 2> &results) {
+    typedef BOOST_TYPEOF(T1(1.0) * T2(1.0)) Tr;
+
+    const int NL = left_vectors.size();
+    const int NR = right_vectors.size();
+    const int n_sections = left_vectors[0].num_sections();
+
+    if (left_vectors[0].section_edges() != right_vectors[0].section_edges()) {
+      throw std::runtime_error("Not supported");
+    }
+
+    for (int n = 0; n < NL-1 ; ++n) {
+      if (left_vectors[n].section_edges() != left_vectors[n+1].section_edges()) {
+        throw std::runtime_error("Not supported");
+      }
+    }
+
+    for (int l = 0; l < NR-1 ; ++l) {
+      if (right_vectors[l].section_edges() != right_vectors[l+1].section_edges()) {
+        throw std::runtime_error("Not supported");
+      }
+    }
+
+    boost::array<double, k1 + k2 + 2> x_min_power, dx_power;
+
+    Eigen::Matrix<Tr,k1+1,k2+1> mid_matrix;
+    Eigen::Matrix<T1,Eigen::Dynamic,Eigen::Dynamic> left_matrix(NL, k1+1);
+    Eigen::Matrix<T2,Eigen::Dynamic,Eigen::Dynamic> right_matrix(k2+1, NR);
+    Eigen::Matrix<Tr,Eigen::Dynamic,Eigen::Dynamic> r(NL, NR);
+
+    r.setZero();
+    for (int s = 0; s < n_sections; ++s) {
+      //boost::timer::cpu_timer t1;
+      dx_power[0] = 1.0;
+      const double dx = left_vectors[0].section_edge(s + 1) - left_vectors[0].section_edge(s);
+      for (int p = 1; p < dx_power.size(); ++p) {
+        dx_power[p] = dx * dx_power[p - 1];
+      }
+
+      for (int p = 0; p < k1 + 1; ++p) {
+        for (int p2 = 0; p2 < k2 + 1; ++p2) {
+          mid_matrix(p,p2) = dx_power[p + p2 + 1] / (p + p2 + 1.0);
+        }
+      }
+
+      for (int n = 0; n < NL; ++n) {
+        for (int p = 0; p< k1+1; ++p) {
+          left_matrix(n, p) = detail::conjg(left_vectors[n].coefficient(s, p));
+        }
+      }
+
+      for (int l = 0; l < NR; ++l) {
+        for (int p2 = 0; p2 < k2 + 1; ++p2) {
+          right_matrix(p2, l) = right_vectors[l].coefficient(s, p2);
+        }
+      }
+      //boost::timer::cpu_timer t2;
+
+      r += left_matrix * (mid_matrix * right_matrix);
+      //boost::timer::cpu_timer t3;
+
+    }
+
+    results.resize(boost::extents[NL][NR]);
+    for (int n = 0; n < NL; ++n) {
+      for (int l = 0; l < NR; ++l) {
+        results[n][l] = r(n,l);
+      }
+    }
+
+  }
 }

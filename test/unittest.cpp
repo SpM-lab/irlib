@@ -124,18 +124,38 @@ TYPED_TEST(HighTTest, KernelTypes) {
 
     //check transformation matrix to Matsubara frequencies
     if (TypeParam::statistics() == ir::fermionic) {
-      const int N_iw = 2;
-      boost::multi_array<std::complex<double>,2> Tnl_legendre(boost::extents[N_iw][3]);
+
+      const int N_iw = 3;
+      //time_t t1, t2;
+
+      boost::multi_array<std::complex<double>,2> Tnl_legendre(boost::extents[N_iw][3]),
+          Tnl_ir(boost::extents[N_iw][3]);
+
       compute_Tnl_legendre(N_iw, 3, Tnl_legendre);
 
+      //Slow version
+      //t1 =  time(NULL);
       for (int n = 0; n < N_iw; n++) {
         std::vector<std::complex<double> > Tnl(basis.dim());
         basis.compute_Tnl(n, Tnl);
         for (int l = 0; l < 3; ++l) {
-         ASSERT_NEAR(std::abs(Tnl[l]/Tnl_legendre[n][l]-1.0), 0.0, 1e-5);
+          //std::cout << " n, l " << n << " " << l << " " << Tnl[l] << " " << Tnl_legendre[n][l] << std::endl;
+          ASSERT_NEAR(std::abs(Tnl[l]/Tnl_legendre[n][l]-1.0), 0.0, 1e-5);
         }
       }
+      //t2 = time(NULL);
+      //std::cout << "time " << t2 - t1 << std::endl;
 
+      //Fast version
+      //t1 =  time(NULL);
+      basis.compute_Tnl(0, N_iw-1, Tnl_ir);
+      //t2 = time(NULL);
+      //std::cout << "time " << t2 - t1 << " " << basis.dim() << " " << Tnl_ir.shape()[1] << std::endl;
+      for (int n = 0; n < N_iw; n++) {
+        for (int l = 0; l < 3; ++l) {
+          ASSERT_NEAR(std::abs(Tnl_ir[n][l] / Tnl_legendre[n][l] - 1.0), 0.0, 1e-5);
+        }
+      }
     }
 
   } catch (const std::exception& e) {
