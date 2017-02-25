@@ -387,7 +387,7 @@ namespace ir {
   template<typename Scalar, typename Kernel>
   class Basis {
    public:
-    Basis(double Lambda, int N = 501, double cutoff = 1e-10);
+    Basis(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501);
 
    private:
     typedef piecewise_polynomial<double, 3> pp_type;

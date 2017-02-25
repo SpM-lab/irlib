@@ -89,7 +89,8 @@ TYPED_TEST(HighTTest, KernelTypes) {
   try {
     //construct ir basis
     const double Lambda = 0.01;//high T
-    ir::Basis<double,TypeParam> basis(Lambda);
+    const int max_dim = 100;
+    ir::Basis<double,TypeParam> basis(Lambda, max_dim);
     ASSERT_TRUE(basis.dim()>3);
 
     //IR basis functions should match Legendre polynomials
@@ -165,9 +166,9 @@ TYPED_TEST(HighTTest, KernelTypes) {
 
 TEST(IrBasis, FermionInsulatingGtau) {
   try {
-    const int N = 501;
     const double Lambda = 300.0, beta = 100.0;
-    ir::Basis<double,ir::FermionicKernel> basis(Lambda, N);
+    const int max_dim = 100;
+    ir::Basis<double,ir::FermionicKernel> basis(Lambda, max_dim);
     ASSERT_TRUE(basis.dim()>0);
 
     typedef ir::piecewise_polynomial<double,3> pp_type;

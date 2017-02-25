@@ -1,6 +1,9 @@
 #include "ir_basis.hpp"
 
 namespace ir {
+  typedef piecewise_polynomial<std::complex<double>, 4> piecewise_polynomial_dcomplex_4;
+  typedef piecewise_polynomial<double, 3> piecewise_polynomial_double_3;
+
   namespace detail {
     template<typename T>
     inline std::vector<T> linspace(T minval, T maxval, int N) {
@@ -41,11 +44,11 @@ namespace ir {
       }
     }
 
-    void construct_matsubra_basis_functions(
+    inline void construct_matsubra_basis_functions(
         int n_min, int n_max,
         statistics s,
         const std::vector<double>& section_edges,
-        std::vector<piecewise_polynomial<std::complex<double>, 4> >& results) {
+        std::vector<piecewise_polynomial_dcomplex_4>& results) {
       typedef piecewise_polynomial<std::complex<double>, 4> pp_type;
 
       const int k = 4;
@@ -79,7 +82,9 @@ namespace ir {
     void compute_transformation_matrix_to_matsubara(
         int n,
         statistics s,
-        const std::vector<piecewise_polynomial<T,k> >& bf_src,
+        const std::vector<
+            piecewise_polynomial<T,k>
+        > & bf_src,
         std::vector<std::complex<double> >& Tnl
     ) {
       const int k_matsubara = 4;
@@ -134,7 +139,7 @@ namespace ir {
   template<typename Kernel>
   void do_svd(double Lambda, int parity, int N, double cutoff_singular_values,
               std::vector<double>& singular_values,
-              std::vector<piecewise_polynomial<double,3> >& basis_functions
+              std::vector<piecewise_polynomial_double_3>& basis_functions
   ) {
     typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
 
@@ -226,10 +231,11 @@ namespace ir {
     }
 
     orthonormalize(basis_functions);
+    assert(singular_values.size() == basis_functions.size());
   }
 
   template<typename Scalar, typename Kernel>
-  Basis<Scalar,Kernel>::Basis(double Lambda, int N, double cutoff) {
+  Basis<Scalar,Kernel>::Basis(double Lambda, int max_dim, double cutoff, int N) {
 
     std::vector<double> even_svalues, odd_svalues, svalues;
     std::vector<pp_type> even_basis_functions, odd_basis_functions;
@@ -253,6 +259,12 @@ namespace ir {
     }
 
     assert(even_svalues.size() + odd_svalues.size() == svalues.size());
+
+    //use max_dim
+    if (svalues.size() > max_dim) {
+      svalues.resize(max_dim);
+      basis_functions_.resize(max_dim);
+    }
 
     //Check
     for (int i = 0; i < svalues.size() - 1; ++i) {
