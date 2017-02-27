@@ -177,7 +177,7 @@ namespace ir {
     detail::svd_square_matrix(K, N, svalues, Vt, U);
 
     //Count non-zero SV
-    int dim = 0;
+    int dim = N;
     for (int i = 1; i < N; ++i) {
       if (std::abs(svalues(i)/svalues(0)) < cutoff_singular_values) {
         dim = i;
