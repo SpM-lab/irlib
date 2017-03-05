@@ -124,7 +124,7 @@ TYPED_TEST(HighTTest, KernelTypes) {
     }
 
     //check transformation matrix to Matsubara frequencies
-    if (TypeParam::statistics() == ir::fermionic) {
+    if (TypeParam::get_statistics() == ir::fermionic) {
 
       const int N_iw = 3;
       //time_t t1, t2;
@@ -134,31 +134,14 @@ TYPED_TEST(HighTTest, KernelTypes) {
 
       compute_Tnl_legendre(N_iw, 3, Tnl_legendre);
 
-      //Slow version
-      //t1 =  time(NULL);
-      for (int n = 0; n < N_iw; n++) {
-        std::vector<std::complex<double> > Tnl(basis.dim());
-        basis.compute_Tnl(n, Tnl);
-        for (int l = 0; l < 3; ++l) {
-          //std::cout << " n, l " << n << " " << l << " " << Tnl[l] << " " << Tnl_legendre[n][l] << std::endl;
-          ASSERT_NEAR(std::abs(Tnl[l]/Tnl_legendre[n][l]-1.0), 0.0, 1e-5);
-        }
-      }
-      //t2 = time(NULL);
-      //std::cout << "time " << t2 - t1 << std::endl;
-
       //Fast version
-      //t1 =  time(NULL);
       basis.compute_Tnl(0, N_iw-1, Tnl_ir);
-      //t2 = time(NULL);
-      //std::cout << "time " << t2 - t1 << " " << basis.dim() << " " << Tnl_ir.shape()[1] << std::endl;
       for (int n = 0; n < N_iw; n++) {
         for (int l = 0; l < 3; ++l) {
-          ASSERT_NEAR(std::abs(Tnl_ir[n][l] / Tnl_legendre[n][l] - 1.0), 0.0, 1e-5);
+          ASSERT_NEAR(std::abs(Tnl_ir[n][l] / (Tnl_legendre[n][l]) - 1.0), 0.0, 1e-5);
         }
       }
     }
-
   } catch (const std::exception& e) {
     FAIL() << e.what();
   }
@@ -168,7 +151,7 @@ TEST(IrBasis, FermionInsulatingGtau) {
   try {
     const double Lambda = 300.0, beta = 100.0;
     const int max_dim = 100;
-    ir::Basis<double,ir::FermionicKernel> basis(Lambda, max_dim);
+    ir::Basis<double,ir::FermionicKernel> basis(Lambda, max_dim, 1e-10, 501);
     ASSERT_TRUE(basis.dim()>0);
 
     typedef ir::piecewise_polynomial<double,3> pp_type;
@@ -183,13 +166,13 @@ TEST(IrBasis, FermionInsulatingGtau) {
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
-      coeff[l] = gtau.overlap(basis(l));
+      coeff[l] = gtau.overlap(basis(l)) * beta / std::sqrt(2.0);
     }
 
     std::vector<double> y_r(nptr, 0.0);
     for (int l = 0; l < 30; ++l) {
       for (int i = 0; i < nptr; ++i) {
-        y_r[i] += coeff[l] * basis(l).compute_value(x[i]);
+        y_r[i] += coeff[l] * (std::sqrt(2.0)/beta) * basis(l).compute_value(x[i]);
       }
     }
 
@@ -198,6 +181,29 @@ TEST(IrBasis, FermionInsulatingGtau) {
       max_diff = std::max(std::abs(y[i]-y_r[i]), max_diff);
       ASSERT_TRUE(std::abs(y[i]-y_r[i]) < 1e-6);
     }
+
+    //to matsubara freq.
+    const int n_iw = 1000;
+    boost::multi_array<std::complex<double>,2> Tnl(boost::extents[n_iw][basis.dim()]);
+    basis.compute_Tnl(0, n_iw-1, Tnl);
+    Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic> Tnl_mat(n_iw, basis.dim()), coeff_vec(basis.dim(),1);
+    coeff_vec.setZero();
+    for (int l = 0; l < basis.dim(); ++l) {
+      coeff_vec(l,0) = coeff[l];
+      for (int n = 0; n < n_iw; ++n) {
+        Tnl_mat(n,l) = Tnl[n][l];
+      }
+    }
+    Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic> coeff_iw = Tnl_mat * coeff_vec;
+
+    const std::complex<double> zi(0.0, 1.0);
+    for (int n = 0; n < n_iw; ++n) {
+      double wn = (2.*n+1)*M_PI/beta;
+      std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
+      ASSERT_NEAR(std::abs(z-coeff_iw(n)), 0.0, 1e-8);
+    }
+
+
   } catch (const std::exception& e) {
     FAIL() << e.what();
   }

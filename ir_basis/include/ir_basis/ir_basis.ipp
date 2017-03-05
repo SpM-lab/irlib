@@ -44,96 +44,148 @@ namespace ir {
       }
     }
 
-    inline void construct_matsubra_basis_functions(
+    template<class T, int k>
+    void construct_matsubra_basis_functions(
         int n_min, int n_max,
         statistics s,
-        const std::vector<double>& section_edges,
-        std::vector<piecewise_polynomial_dcomplex_4>& results) {
-      typedef piecewise_polynomial<std::complex<double>, 4> pp_type;
+        const std::vector<double> &section_edges,
+        std::vector<piecewise_polynomial<std::complex<T>, k> > &results) {
+      typedef piecewise_polynomial<std::complex<T>, k> pp_type;
 
-      const int k = 4;
       const int N = section_edges.size() - 1;
 
       results.resize(0);
 
       std::complex<double> z;
-      boost::multi_array<std::complex<double>,2> coeffs(boost::extents[N][k+1]);
+      boost::multi_array<std::complex<T>, 2> coeffs(boost::extents[N][k + 1]);
+
+      boost::array<double,k+1> pre_factor;
+      pre_factor[0] = 1.0;
+      for (int j = 1; j < k+1; ++j) {
+        pre_factor[j] = pre_factor[j-1]/j;
+      }
 
       for (int n = n_min; n <= n_max; ++n) {
         if (s == fermionic) {
-          z = -std::complex<double>(0.0, n+0.5) * M_PI;
+          z = -std::complex<double>(0.0, n + 0.5) * M_PI;
         } else if (s == bosonic) {
           z = -std::complex<double>(0.0, n) * M_PI;
         }
         for (int section = 0; section < N; ++section) {
-          const double x =section_edges[section];
-          std::complex<double> exp0 = std::exp(z*(x+1));
-          coeffs[section][0] = exp0;
-          coeffs[section][1] = exp0*z;
-          coeffs[section][2] = exp0*z*z/2.0;
-          coeffs[section][3] = exp0*z*z*z/6.0;
-          coeffs[section][4] = exp0*z*z*z*z/24.0;
+          const double x = section_edges[section];
+          std::complex<T> exp0 = std::exp(z * (x + 1));
+          std::complex<T> z_power = 1.0;
+          for (int j = 0; j < k+1; ++j) {
+            coeffs[section][j] = exp0 * z_power * pre_factor[j];
+            z_power *= z;
+          }
         }
         results.push_back(pp_type(N, section_edges, coeffs));
       }
     }
 
-    template<class T, int k>
-    void compute_transformation_matrix_to_matsubara(
-        int n,
-        statistics s,
-        const std::vector<
-            piecewise_polynomial<T,k>
-        > & bf_src,
-        std::vector<std::complex<double> >& Tnl
-    ) {
-      const int k_matsubara = 4;
-      const int N = bf_src[0].num_sections();
-      piecewise_polynomial<std::complex<double>, k_matsubara> exp_functions;
-
-      std::complex<double> z;
-      if (s == fermionic) {
-        z = -std::complex<double>(0.0, n+0.5) * M_PI;
-      } else if (s == bosonic) {
-        z = -std::complex<double>(0.0, n) * M_PI;
-      }
-
-      boost::multi_array<std::complex<double>,2> coeffs(boost::extents[N][k_matsubara+1]);
-      for (int section = 0; section < N; ++section) {
-        const double x = bf_src[0].section_edge(section);
-        std::complex<double> exp0 = std::exp(z*(x+1));
-        coeffs[section][0] = exp0;
-        coeffs[section][1] = exp0*z;
-        coeffs[section][2] = exp0*z*z/2.0;
-        coeffs[section][3] = exp0*z*z*z/6.0;
-        coeffs[section][4] = exp0*z*z*z*z/24.0;
-      }
-      piecewise_polynomial<std::complex<double>, k_matsubara> exp_func(N, bf_src[0].section_edges(), coeffs);
-
-      double norm = std::sqrt(exp_func.overlap(exp_func).real());
-      Tnl.resize(bf_src.size());
-      for (int l=0; l<bf_src.size(); ++l) {
-        Tnl[l] = exp_func.overlap(bf_src[l])/norm;
-      }
-    };
-
-    template<class T, int k>
+    template<class T, int k, int k_iw>
     void compute_transformation_matrix_to_matsubara(
         int n_min, int n_max,
-        statistics s,
+        statistics statis,
         const std::vector<piecewise_polynomial<T,k> >& bf_src,
         boost::multi_array<std::complex<double>,2> & Tnl
     ) {
-      typedef piecewise_polynomial<std::complex<double>, 4> pp_type;
+      typedef std::complex<double> dcomplex;
+      typedef piecewise_polynomial<std::complex<double>, k_iw> pp_type;
+      typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
+
       std::vector<pp_type> matsubara_functions;
 
-      construct_matsubra_basis_functions(n_min, n_max, s, bf_src[0].section_edges(), matsubara_functions);
-      compute_overlap(matsubara_functions, bf_src, Tnl);
-      std::transform(Tnl.origin(), Tnl.origin()+Tnl.num_elements(),
-        Tnl.origin(),
-        std::bind1st(std::multiplies<std::complex<double> >(),1/std::sqrt(2.0))
-      );
+      construct_matsubra_basis_functions(n_min, n_max, statis, bf_src[0].section_edges(), matsubara_functions);
+
+      const int n_section = bf_src[0].num_sections();
+      const int n_iw = n_max-n_min+1;
+
+      matrix_t left_mid_matrix(n_iw, k+1);
+      matrix_t left_matrix(n_iw, k_iw+1);
+      matrix_t mid_matrix(k_iw+1, k+1);
+      matrix_t right_matrix(k+1, bf_src.size());
+      matrix_t r(n_iw, bf_src.size());
+      r.setZero();
+
+      boost::array<double, k + k_iw + 2> dx_power;
+
+      const double cutoff = 0.1;
+      for (int s=0; s < n_section; ++s) {
+        double x0 = bf_src[0].section_edge(s);
+        double x1 = bf_src[0].section_edge(s+1);
+        double dx = x1 - x0;
+
+        dx_power[0] = 1.0;
+        for (int p = 1; p < dx_power.size(); ++p) {
+          dx_power[p] = dx * dx_power[p - 1];
+        }
+
+        //Use Taylor expansion for exp(i w_n tau) for M_PI*(n+0.5)*dx < cutoff*M_PI
+        int n_max_cs = std::max(std::min(static_cast<int>(cutoff/dx - 0.5), n_max), 0);
+
+        for (int p = 0; p < k_iw + 1; ++p) {
+          for (int p2 = 0; p2 < k + 1; ++p2) {
+            mid_matrix(p, p2) = dx_power[p + p2 + 1] / (p + p2 + 1.0);
+          }
+        }
+
+        for (int n = 0; n < n_max_cs-n_min+1; ++n) {
+          for (int p = 0; p < k_iw + 1; ++p) {
+            left_matrix(n, p) = detail::conjg(matsubara_functions[n].coefficient(s, p));
+          }
+        }
+
+        left_mid_matrix.block(0,0,n_max_cs-n_min+1,k+1) = left_matrix.block(0,0,n_max_cs-n_min+1,k_iw+1)* mid_matrix;
+
+        //Compute the overlap exactly for M_PI*(n+0.5)*dx > cutoff*M_PI
+        for (int n = n_max_cs+1; n <= n_max; ++n) {
+          std::complex<double> z;
+          if (statis == fermionic) {
+            z = std::complex<double>(0.0, n+0.5) * M_PI;
+          } else if (statis == bosonic) {
+            z = std::complex<double>(0.0, n) * M_PI;
+          }
+
+          dcomplex dx_z = dx * z;
+          dcomplex dx_z2 = dx_z * dx_z;
+          dcomplex dx_z3 = dx_z2 * dx_z;
+          dcomplex inv_z = 1.0/z;
+          dcomplex inv_z2 = inv_z * inv_z;
+          dcomplex inv_z3 = inv_z2 * inv_z;
+          dcomplex inv_z4 = inv_z3 * inv_z;
+          dcomplex exp = std::exp(dx * z);
+          dcomplex exp0 = std::exp((x0+1.0) * z);
+
+          left_mid_matrix(n-n_min,0) = (-1.0+exp)*inv_z*exp0;
+          left_mid_matrix(n-n_min,1) = ((dx_z -1.0)*exp+1.0)*inv_z2*exp0;
+          left_mid_matrix(n-n_min,2) = ((dx_z2-2.0*dx_z+2.0)*exp-2.0)*inv_z3*exp0;
+          left_mid_matrix(n-n_min,3) = ((dx_z3-3.0*dx_z2+6.0*dx_z-6.0)*exp+6.0)*inv_z4*exp0;
+        }
+
+        for (int l = 0; l < bf_src.size(); ++l) {
+          for (int p2 = 0; p2 < k + 1; ++p2) {
+            right_matrix(p2, l) = bf_src[l].coefficient(s, p2);
+          }
+        }
+
+        r += left_mid_matrix * right_matrix;
+      }
+
+      Tnl.resize(boost::extents[n_iw][bf_src.size()]);
+      std::vector<double> inv_norm(bf_src.size());
+      for (int l=0; l<bf_src.size(); ++l) {
+        inv_norm[l] = 1./std::sqrt(static_cast<double>(bf_src[l].overlap(bf_src[l])));
+      }
+      for (int n=0; n<n_iw; ++n) {
+        for (int l=0; l<bf_src.size(); ++l) {
+          // 0.5 is the inverse of the norm of exp(i w_n tau)
+          Tnl[n][l] = r(n,l) * inv_norm[l] * std::sqrt(0.5);
+        }
+      }
     }
+
   }//namespace detail
 
   template<typename Kernel>
@@ -295,18 +347,10 @@ namespace ir {
   template<typename Scalar, typename Kernel>
   void
   Basis<Scalar,Kernel>::compute_Tnl(
-    int n, std::vector<std::complex<double> >& Tnl
-  ) const {
-    detail::compute_transformation_matrix_to_matsubara<double,3>(n, Kernel::statistics(), basis_functions_, Tnl);
-  };
-
-  template<typename Scalar, typename Kernel>
-  void
-  Basis<Scalar,Kernel>::compute_Tnl(
     int n_min, int n_max,
     boost::multi_array<std::complex<double>,2> & Tnl
   ) const {
-    detail::compute_transformation_matrix_to_matsubara<double,3>(n_min, n_max, Kernel::statistics(), basis_functions_, Tnl);
+    detail::compute_transformation_matrix_to_matsubara<double,3,16>(n_min, n_max, Kernel::get_statistics(), basis_functions_, Tnl);
   };
 
   /// Compute overlap <left | right> with complex conjugate
@@ -383,6 +427,5 @@ namespace ir {
         results[n][l] = r(n,l);
       }
     }
-
   }
 }

@@ -63,13 +63,6 @@ namespace ir {
       return std::conj(a);
     }
 
-    template<class T, int k>
-    void compute_transformation_matrix_to_matsubara(
-        int n,
-        statistics s,
-        const std::vector<piecewise_polynomial<T,k> >& bf_src,
-        std::vector<std::complex<double> >& Tnl
-    );
   }
 
 
@@ -345,7 +338,7 @@ namespace ir {
       }
     }
 
-    static statistics statistics() {
+    static statistics get_statistics() {
       return fermionic;
     }
 
@@ -373,7 +366,7 @@ namespace ir {
       }
     }
 
-    static statistics statistics() {
+    static statistics get_statistics() {
       return bosonic;
     }
 
@@ -398,11 +391,6 @@ namespace ir {
     void value(double x, std::vector<double> &val) const;
     const pp_type &operator()(int l) const { return basis_functions_[l]; }
     int dim() const { return basis_functions_.size(); }
-
-    void compute_Tnl(
-        int n,
-        std::vector<std::complex<double> >& Tnl
-    ) const;
 
     void compute_Tnl(
         int n_min, int n_max,
