@@ -1,6 +1,6 @@
 #pragma once
 
-namespace ir_basis {
+namespace irlib {
     namespace statistics {
         enum statistics_type {
             BOSONIC = 0,

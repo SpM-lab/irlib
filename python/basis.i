@@ -1,8 +1,8 @@
-/* ir_basis.i */
-%module(package="ir_basis", docstring="Python bindings for intermediate representation libraries") ir_basis
+/* basis.i */
+%module(package="irlib", docstring="Python bindings for intermediate representation libraries") basis
 %{
 #define SWIG_FILE_WITH_INIT
-#include <ir_basis/ir_basis.hpp>
+#include <irlib/basis.hpp>
 %}
 
 %include "std_string.i"
@@ -44,6 +44,6 @@
  */
 
 
-%include <ir_basis/ir_basis.hpp>
+%include <irlib/basis.hpp>
 
 /* %template(real_piecewise_polynomial) alps::gf::piecewise_polynomial<double>; */

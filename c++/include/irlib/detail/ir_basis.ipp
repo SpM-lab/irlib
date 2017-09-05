@@ -1,4 +1,4 @@
-#include "../ir_basis.hpp"
+#include "irlib/basis.hpp"
 
 #include <algorithm>
 
@@ -19,7 +19,7 @@ extern "C" void dgesdd_(const char *jobz,
                         double *vt, const int *ldvt,
                         double *work, const int *lwork, const int *iwork, int *info);
 
-namespace ir_basis {
+namespace irlib {
 
     namespace detail {
 
@@ -63,7 +63,7 @@ namespace ir_basis {
      * @param y_array  values of y
      */
     template<typename T>
-    ir_basis::piecewise_polynomial<T> construct_piecewise_polynomial_cspline(
+    irlib::piecewise_polynomial<T> construct_piecewise_polynomial_cspline(
         const std::vector<double> &x_array, const std::vector<double> &y_array) {
       const int n_points = x_array.size();
       const int n_section = n_points - 1;
@@ -80,8 +80,8 @@ namespace ir_basis {
           coeff[s][p] = spline.get_coeff(s, p);
         }
       }
-      ir_basis::piecewise_polynomial<T> tmp(n_section, x_array, coeff);
-      return ir_basis::piecewise_polynomial<T>(n_section, x_array, coeff);
+      irlib::piecewise_polynomial<T> tmp(n_section, x_array, coeff);
+      return irlib::piecewise_polynomial<T>(n_section, x_array, coeff);
     };
 
 
@@ -89,7 +89,7 @@ namespace ir_basis {
     template<typename T>
     void do_svd(const kernel <T> &knl, int parity, int N, double cutoff_singular_values,
                 std::vector<double> &singular_values,
-                std::vector<ir_basis::piecewise_polynomial<double> > &basis_functions
+                std::vector<irlib::piecewise_polynomial<double> > &basis_functions
     ) {
       typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
 
@@ -193,7 +193,7 @@ namespace ir_basis {
           throw std::runtime_error("Error: max_dim > 100!");
         }
         std::vector<double> even_svalues, odd_svalues, svalues;
-        std::vector<ir_basis::piecewise_polynomial<double> > even_basis_functions, odd_basis_functions;
+        std::vector<irlib::piecewise_polynomial<double> > even_basis_functions, odd_basis_functions;
 
         do_svd<Scalar>(*p_knl_, 1, N, cutoff, even_svalues, even_basis_functions);
         do_svd<Scalar>(*p_knl_, -1, N, cutoff, odd_svalues, odd_basis_functions);
@@ -271,7 +271,7 @@ namespace ir_basis {
         int n_min, int n_max,
         Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) const {
-        ir_basis::compute_transformation_matrix_to_matsubara<double>(n_min,
+        irlib::compute_transformation_matrix_to_matsubara<double>(n_min,
                                                                              n_max,
                                                                              p_knl_->get_statistics(),
                                                                              basis_functions_,

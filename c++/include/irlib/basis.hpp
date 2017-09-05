@@ -19,7 +19,7 @@
 #include "detail/aux.hpp"
 #include "detail/spline.hpp"
 
-namespace ir_basis {
+namespace irlib {
     /***
      * Construct a piecewise polynomial by means of cubic spline
      * @param T  we expect T=double
@@ -40,7 +40,7 @@ namespace ir_basis {
         virtual T operator()(double x, double y) const = 0;
 
         /// return statistics
-        virtual ir_basis::statistics::statistics_type get_statistics() const = 0;
+        virtual irlib::statistics::statistics_type get_statistics() const = 0;
 
         /// return lambda
         virtual double Lambda() const = 0;
@@ -77,8 +77,8 @@ namespace ir_basis {
             }
         }
 
-        ir_basis::statistics::statistics_type get_statistics() const {
-            return ir_basis::statistics::FERMIONIC;
+        irlib::statistics::statistics_type get_statistics() const {
+            return irlib::statistics::FERMIONIC;
         }
 
         double Lambda() const {
@@ -119,8 +119,8 @@ namespace ir_basis {
             }
         }
 
-        ir_basis::statistics::statistics_type get_statistics() const {
-            return ir_basis::statistics::BOSONIC;
+        irlib::statistics::statistics_type get_statistics() const {
+            return irlib::statistics::BOSONIC;
         }
 
         double Lambda() const {
@@ -157,7 +157,7 @@ namespace ir_basis {
 
     private:
         boost::shared_ptr<kernel<Scalar> > p_knl_;
-        std::vector< ir_basis::piecewise_polynomial<double> > basis_functions_;
+        std::vector< irlib::piecewise_polynomial<double> > basis_functions_;
 
     public:
         /**
@@ -172,12 +172,12 @@ namespace ir_basis {
          * @param l l-th basis function
          * @return  reference to the l-th basis function
          */
-        const ir_basis::piecewise_polynomial<double> &operator()(int l) const { return basis_functions_[l]; }
+        const irlib::piecewise_polynomial<double> &operator()(int l) const { return basis_functions_[l]; }
 
         /**
          * Return a reference to all basis functions
          */
-        const std::vector<ir_basis::piecewise_polynomial<double> > all() const { return basis_functions_; }
+        const std::vector<irlib::piecewise_polynomial<double> > all() const { return basis_functions_; }
 
         /**
          * Return number of basis functions
@@ -186,7 +186,7 @@ namespace ir_basis {
         int dim() const { return basis_functions_.size(); }
 
         /// Return statistics
-        ir_basis::statistics::statistics_type get_statistics() const {
+        irlib::statistics::statistics_type get_statistics() const {
             return p_knl_->get_statistics();
         }
 
@@ -213,7 +213,7 @@ namespace ir_basis {
                 const std::vector<long> &n_vec,
                 Eigen::Tensor<std::complex<double>, 2> &Tnl
         ) const {
-            ir_basis::compute_transformation_matrix_to_matsubara<double>(n_vec,
+            irlib::compute_transformation_matrix_to_matsubara<double>(n_vec,
                                                                                    p_knl_->get_statistics(),
                                                                                    basis_functions_,
                                                                                    Tnl);
@@ -233,7 +233,7 @@ namespace ir_basis {
             int nl = basis_functions_.size();
 
             Eigen::Tensor<std::complex<double>, 2> Tbar_ol(no, nl);
-            ir_basis::compute_Tbar_ol(o_vec, basis_functions_, Tbar_ol);
+            irlib::compute_Tbar_ol(o_vec, basis_functions_, Tbar_ol);
 
             return Tbar_ol;
         }
@@ -248,18 +248,18 @@ namespace ir_basis {
     /**
      * Fermionic IR basis
      */
-    class fermionic_ir_basis_set : public ir_basis_set<double> {
+    class basis_f : public ir_basis_set<double> {
     public:
-        fermionic_ir_basis_set(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501)
+        basis_f(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501)
                 : ir_basis_set<double>(fermionic_kernel(Lambda), max_dim, cutoff, N) {}
     };
 
     /**
      * Bosonic IR basis
      */
-    class bosonic_ir_basis_set : public ir_basis_set<double> {
+    class basis_b : public ir_basis_set<double> {
     public:
-        bosonic_ir_basis_set(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501)
+        basis_b(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501)
                 : ir_basis_set<double>(bosonic_kernel(Lambda), max_dim, cutoff, N) {}
     };
 }

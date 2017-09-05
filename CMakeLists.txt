@@ -22,7 +22,7 @@ find_package(Eigen3 REQUIRED)
 find_package(LAPACK REQUIRED)
 
 #include directories
-set(IRBASIS_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS}  "ir_basis/include" "test") #rest taken care of by libraries dependencies
+set(IRBASIS_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS}  "c++/include" "test") #rest taken care of by libraries dependencies
 
 # Build and enable tests
 #testing setup
@@ -44,7 +44,7 @@ foreach(test ${unittest_src})
     add_gtest(${test} test)
 endforeach(test)
 
-install(DIRECTORY "ir_basis/include" DESTINATION "." FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY "c++/include" DESTINATION "." FILES_MATCHING PATTERN "*.hpp")
 
 
 add_subdirectory(python)

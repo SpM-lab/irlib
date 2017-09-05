@@ -6,9 +6,9 @@
 #include <Eigen/Core>
 #include <Eigen/CXX11/Tensor>
 
-namespace ir_basis {
+namespace irlib {
     template<typename T>
-    ir_basis::piecewise_polynomial<T> construct_piecewise_polynomial_cspline(
+    irlib::piecewise_polynomial<T> construct_piecewise_polynomial_cspline(
             const std::vector<double> &x_array, const std::vector<double> &y_array);
 
     namespace detail {
@@ -65,7 +65,7 @@ namespace ir_basis {
     }//namespace detail
 }
 
-namespace ir_basis {
+namespace irlib {
     //AVOID USING BOOST_TYPEOF
     template<class T1, class T2>
     struct result_of_overlap {
@@ -80,7 +80,7 @@ namespace ir_basis {
     template<class T>
     void compute_integral_with_exp(
             const std::vector<double> &w,
-            const std::vector<ir_basis::piecewise_polynomial<T>> &pp_func,
+            const std::vector<irlib::piecewise_polynomial<T>> &pp_func,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     );
 
@@ -92,7 +92,7 @@ namespace ir_basis {
         template<class T>
         void construct_matsubra_basis_functions_coeff(
                 int n_min, int n_max,
-                ir_basis::statistics::statistics_type s,
+                irlib::statistics::statistics_type s,
                 const std::vector<double> &section_edges,
                 int k,
                 boost::multi_array<std::complex<T>, 3> &coeffs) {
@@ -116,9 +116,9 @@ namespace ir_basis {
           }
 
           for (int n = n_min; n <= n_max; ++n) {
-            if (s == ir_basis::statistics::FERMIONIC) {
+            if (s == irlib::statistics::FERMIONIC) {
               z = -std::complex<double>(0.0, n + 0.5) * M_PI;
-            } else if (s == ir_basis::statistics::BOSONIC) {
+            } else if (s == irlib::statistics::BOSONIC) {
               z = -std::complex<double>(0.0, n) * M_PI;
             }
             for (int section = 0; section < N; ++section) {
@@ -177,12 +177,12 @@ namespace ir_basis {
         template<class T>
         void compute_transformation_matrix_to_matsubara_impl(
                 const std::vector<long> &n_vec,
-                ir_basis::statistics::statistics_type statis,
-                const std::vector<ir_basis::piecewise_polynomial<T>> &bf_src,
+                irlib::statistics::statistics_type statis,
+                const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
                 Eigen::Tensor<std::complex<double>, 2> &Tnl
         ) {
           typedef std::complex<double> dcomplex;
-          typedef ir_basis::piecewise_polynomial<std::complex<double> > pp_type;
+          typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
           typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
           typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
@@ -206,9 +206,9 @@ namespace ir_basis {
           std::vector<double> w(n_vec.size());
 
           for (int n = 0; n < n_vec.size(); ++n) {
-            if (statis == ir_basis::statistics::FERMIONIC) {
+            if (statis == irlib::statistics::FERMIONIC) {
               w[n] = (n_vec[n] + 0.5) * M_PI;
-            } else if (statis == ir_basis::statistics::BOSONIC) {
+            } else if (statis == irlib::statistics::BOSONIC) {
               w[n] = n_vec[n] * M_PI;
             }
           }
@@ -251,11 +251,11 @@ namespace ir_basis {
     template<class T>
     void compute_integral_with_exp(
             const std::vector<double> &w,
-            const std::vector<ir_basis::piecewise_polynomial<T>> &pp_func,
+            const std::vector<irlib::piecewise_polynomial<T>> &pp_func,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
       typedef std::complex<double> dcomplex;
-      typedef ir_basis::piecewise_polynomial<std::complex<double> > pp_type;
+      typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
       typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
       typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
@@ -386,8 +386,8 @@ namespace ir_basis {
     template<class T>
     void compute_transformation_matrix_to_matsubara(
             int n_min, int n_max,
-            ir_basis::statistics::statistics_type statis,
-            const std::vector<ir_basis::piecewise_polynomial<T>> &bf_src,
+            irlib::statistics::statistics_type statis,
+            const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
       const int num_n = n_max - n_min + 1;
@@ -426,12 +426,12 @@ namespace ir_basis {
     template<class T>
     void compute_transformation_matrix_to_matsubara(
             const std::vector<long> &n,
-            ir_basis::statistics::statistics_type statis,
-            const std::vector<ir_basis::piecewise_polynomial<T>> &bf_src,
+            irlib::statistics::statistics_type statis,
+            const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
       typedef std::complex<double> dcomplex;
-      typedef ir_basis::piecewise_polynomial<std::complex<double> > pp_type;
+      typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
       typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
       typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
@@ -446,7 +446,7 @@ namespace ir_basis {
       }
 
       std::vector<double> w;
-      if (statis == ir_basis::statistics::FERMIONIC) {
+      if (statis == irlib::statistics::FERMIONIC) {
         std::transform(n.begin(), n.end(), std::back_inserter(w), [](double x) { return M_PI * (x + 0.5); });
       } else {
         std::transform(n.begin(), n.end(), std::back_inserter(w), [](double x) { return M_PI * x; });
@@ -476,11 +476,11 @@ namespace ir_basis {
     template<class T>
     void compute_Tbar_ol(
             const std::vector<long> &o_vec,
-            const std::vector<ir_basis::piecewise_polynomial<T>> &bf_src,
+            const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
             Eigen::Tensor<std::complex<double>, 2> &Tbar_ol
     ) {
       typedef std::complex<double> dcomplex;
-      typedef ir_basis::piecewise_polynomial<std::complex<double> > pp_type;
+      typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
       typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
       typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
@@ -514,8 +514,8 @@ namespace ir_basis {
     /// Compute overlap <left | right> with complex conjugate
     template<class T1, class T2>
     void compute_overlap(
-            const std::vector<ir_basis::piecewise_polynomial<T1> > &left_vectors,
-            const std::vector<ir_basis::piecewise_polynomial<T2> > &right_vectors,
+            const std::vector<irlib::piecewise_polynomial<T1> > &left_vectors,
+            const std::vector<irlib::piecewise_polynomial<T2> > &right_vectors,
             boost::multi_array<typename result_of_overlap<T1, T2>::value, 2> &results) {
       typedef typename result_of_overlap<T1, T2>::value Tr;
 
@@ -603,8 +603,8 @@ namespace ir_basis {
     /// The basis vectors are NOT necessarily normalized to 1.
     template<class T1, class T2>
     void compute_transformation_matrix(
-            const std::vector<ir_basis::piecewise_polynomial<T1> > &dst_vectors,
-            const std::vector<ir_basis::piecewise_polynomial<T2> > &src_vectors,
+            const std::vector<irlib::piecewise_polynomial<T1> > &dst_vectors,
+            const std::vector<irlib::piecewise_polynomial<T2> > &src_vectors,
             boost::multi_array<typename result_of_overlap<T1, T2>::value, 2> &results) {
       compute_overlap(dst_vectors, src_vectors, results);
 
@@ -638,7 +638,7 @@ namespace ir_basis {
      * @param Nl number of Legendre polynomials
      * @return Piecewise polynomials
      */
-    inline std::vector<ir_basis::piecewise_polynomial<double>>
+    inline std::vector<irlib::piecewise_polynomial<double>>
     construct_cubic_spline_normalized_legendre_polynomials(int Nl) {
         int Nl_max = 100;
         int M = 40;
@@ -671,7 +671,7 @@ namespace ir_basis {
         x_points.push_back(-1);
         std::sort(x_points.begin(), x_points.end());
 
-        std::vector<ir_basis::piecewise_polynomial<double>> results;
+        std::vector<irlib::piecewise_polynomial<double>> results;
         std::vector<double> y_vals(x_points.size());
         for (int l = 0; l < Nl; ++l) {
             for (int j = 0; j < x_points.size(); ++j) {
@@ -683,4 +683,4 @@ namespace ir_basis {
         return results;
     }
 
-}//namespace ir_basis
+}//namespace irlib

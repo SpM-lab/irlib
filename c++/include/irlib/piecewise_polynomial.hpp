@@ -11,7 +11,7 @@
 /**
  * @brief Class representing a pieacewise polynomial and utilities
  */
-namespace ir_basis {
+namespace irlib {
 
     template<typename Scalar>
     class piecewise_polynomial;
@@ -394,8 +394,8 @@ namespace ir_basis {
  * @brief Class representing a pieacewise polynomial and utilities
  */
     template<typename T>
-    ir_basis::piecewise_polynomial<T>
-    multiply(const ir_basis::piecewise_polynomial<T> &f1, const ir_basis::piecewise_polynomial<T> &f2) {
+    irlib::piecewise_polynomial<T>
+    multiply(const irlib::piecewise_polynomial<T> &f1, const irlib::piecewise_polynomial<T> &f2) {
         if (f1.section_edges() != f2.section_edges()) {
             throw std::runtime_error("Two pieacewise_polynomial objects with different sections cannot be multiplied.");
         }
@@ -404,7 +404,7 @@ namespace ir_basis {
         const int k2 = f2.order();
         const int k = k1 + k2;
 
-        ir_basis::piecewise_polynomial<T> r(k, f1.section_edges());
+        irlib::piecewise_polynomial<T> r(k, f1.section_edges());
         for (int s=0; s < f1.num_sections(); ++s) {
             for (int p = 0; p <= k; p++) {
                 r.coefficient(s, p) = 0.0;
@@ -420,7 +420,7 @@ namespace ir_basis {
 
     template<typename T>
     T
-    integrate(const ir_basis::piecewise_polynomial<T> &y) {
+    integrate(const irlib::piecewise_polynomial<T> &y) {
         const int k = y.order();
 
         std::vector<T> rvec(k+1, 0.0);

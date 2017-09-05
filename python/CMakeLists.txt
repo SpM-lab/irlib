@@ -42,25 +42,24 @@ include_directories(
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/ir_basis)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 
-#set(GF_SRCS ir_basis.hpp)
 set(GF_SRCS "")
 
-set(GF_INTERFACE_FILES ir_basis.i)
+set(GF_INTERFACE_FILES basis.i)
 
 set_source_files_properties(${GF_INTERFACE_FILES} PROPERTIES CPLUSPLUS ON)
-swig_add_library(ir_basis LANGUAGE python SOURCES ${GF_INTERFACE_FILES} ${GF_SRCS})
-swig_link_libraries(ir_basis ${PYTHON_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+swig_add_library(basis LANGUAGE python SOURCES ${GF_INTERFACE_FILES} ${GF_SRCS})
+swig_link_libraries(basis ${PYTHON_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
 
 include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_SOURCE_DIR}/ir_basis/include/ir_basis
+        ${CMAKE_SOURCE_DIR}/c++/include/irlib
         ${PROJECT_BINARY_DIR}
         ${PYTHON_INCLUDE_PATH}
         ${NUMPY_INCLUDE_DIRS}
         ${ALPSCore_INCLUDE_DIR}
 )
 
-install(TARGETS _ir_basis DESTINATION ${PYTHON_SITE_PACKAGES}/ir_basis)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ir_basis.py DESTINATION ${PYTHON_SITE_PACKAGES}/ir_basis)
+install(TARGETS _basis DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/basis.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
