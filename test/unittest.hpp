@@ -5,10 +5,6 @@
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/multi_array.hpp>
 
-//#include <boost/timer/timer.hpp>
-//#include <time.h>
-
-
 void compute_Tnl_legendre(int n_matsubara, int n_legendre, boost::multi_array<std::complex<double>,2> &Tnl) {
   double sign_tmp = 1.0;
   Tnl.resize(boost::extents[n_matsubara][n_legendre]);

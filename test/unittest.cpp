@@ -5,7 +5,7 @@
 TEST(PiecewisePolynomial, Orthogonalization) {
     typedef double Scalar;
     const int n_section = 10, k = 8, n_basis = 3;
-    typedef ir::piecewise_polynomial<Scalar,k> pp_type;
+    typedef ir_basis::piecewise_polynomial<Scalar> pp_type;
 
     std::vector<double> section_edges(n_section+1);
     boost::multi_array<Scalar,3> coeff(boost::extents[n_basis][n_section][k+1]);
@@ -65,7 +65,7 @@ TEST(PiecewisePolynomial, Orthogonalization) {
         }
     }
 
-    ir::orthonormalize(nfunctions);
+    ir_basis::orthonormalize(nfunctions);
     for (int n = 0; n < n_basis; ++ n) {
         for (int m = 0; m < n_basis; ++m) {
             EXPECT_NEAR(nfunctions[n].overlap(nfunctions[m]),
@@ -83,16 +83,17 @@ template<class T>
 class HighTTest : public testing::Test {
 };
 
-typedef ::testing::Types<ir::FermionicKernel, ir::BosonicKernel> KernelTypes;
+//typedef ::testing::Types<ir_basis::fermionic_kernel, ir_basis::bosonic_kernel> KernelTypes;
+typedef ::testing::Types<ir_basis::fermionic_ir_basis_set, ir_basis::bosonic_ir_basis_set> BasisTypes;
 
-TYPED_TEST_CASE(HighTTest, KernelTypes);
+TYPED_TEST_CASE(HighTTest, BasisTypes);
 
-TYPED_TEST(HighTTest, KernelTypes) {
+TYPED_TEST(HighTTest, BasisTypes) {
   try {
     //construct ir basis
     const double Lambda = 0.01;//high T
     const int max_dim = 100;
-    ir::Basis<double,TypeParam> basis(Lambda, max_dim);
+    TypeParam basis(Lambda, max_dim);
     ASSERT_TRUE(basis.dim()>3);
 
     //IR basis functions should match Legendre polynomials
@@ -126,7 +127,7 @@ TYPED_TEST(HighTTest, KernelTypes) {
     }
 
     //check transformation matrix to Matsubara frequencies
-    if (TypeParam::get_statistics() == ir::fermionic) {
+    if (basis.get_statistics() == ir_basis::statistics::FERMIONIC) {
 
       const int N_iw = 3;
       //time_t t1, t2;
@@ -153,10 +154,10 @@ TEST(IrBasis, FermionInsulatingGtau) {
   try {
     const double Lambda = 300.0, beta = 100.0;
     const int max_dim = 100;
-    ir::Basis<double,ir::FermionicKernel> basis(Lambda, max_dim, 1e-10, 501);
+    ir_basis::fermionic_ir_basis_set basis(Lambda, max_dim, 1e-10, 501);
     ASSERT_TRUE(basis.dim()>0);
 
-    typedef ir::piecewise_polynomial<double,3> pp_type;
+    typedef ir_basis::piecewise_polynomial<double> pp_type;
 
     const int nptr = basis(0).num_sections() + 1;
     std::vector<double> x(nptr), y(nptr);
@@ -164,7 +165,7 @@ TEST(IrBasis, FermionInsulatingGtau) {
       x[i] = basis(0).section_edge(i);
       y[i] = std::exp(-0.5*beta)*std::cosh(-0.5*beta*x[i]);
     }
-    pp_type gtau(ir::construct_piecewise_polynomial_cspline<double>(x, y));
+    pp_type gtau(ir_basis::construct_piecewise_polynomial_cspline<double>(x, y));
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
@@ -215,10 +216,10 @@ TEST(IrBasis, Diagonal) {
   try {
     const double Lambda = 300.0, beta = 100.0;
     const int max_dim = 100;
-    ir::Basis<double,ir::FermionicKernel> basis(Lambda, max_dim, 1e-10, 501);
+    ir_basis::fermionic_ir_basis_set basis(Lambda, max_dim, 1e-10, 501);
     ASSERT_TRUE(basis.dim()>0);
 
-    typedef ir::piecewise_polynomial<double,3> pp_type;
+    typedef ir_basis::piecewise_polynomial<double> pp_type;
 
     const int nptr = basis(0).num_sections() + 1;
     std::vector<double> x(nptr), y(nptr);
@@ -226,7 +227,7 @@ TEST(IrBasis, Diagonal) {
       x[i] = basis(0).section_edge(i);
       y[i] = std::exp(-0.5*beta)*std::cosh(-0.5*beta*x[i]);
     }
-    pp_type gtau(ir::construct_piecewise_polynomial_cspline<double>(x, y));
+    pp_type gtau(ir_basis::construct_piecewise_polynomial_cspline<double>(x, y));
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
@@ -278,10 +279,10 @@ TEST(IrBasis, Test) {
     const int max_dim = 100;
     typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
 
-    ir::Basis<double, ir::FermionicKernel> basis(Lambda, max_dim, 1e-10, 501);
+    ir_basis::fermionic_ir_basis_set basis(Lambda, max_dim, 1e-10, 501);
     ASSERT_TRUE(basis.dim() > 0);
 
-    typedef ir::piecewise_polynomial<double, 3> pp_type;
+    typedef ir_basis::piecewise_polynomial<double> pp_type;
 
     const int nptr = basis(0).num_sections() + 1;
     std::vector<double> x(nptr), y(nptr);
@@ -289,7 +290,7 @@ TEST(IrBasis, Test) {
       x[i] = basis(0).section_edge(i);
       y[i] = std::exp(-0.5 * beta) * std::cosh(-0.5 * beta * x[i]);
     }
-    pp_type gtau(ir::construct_piecewise_polynomial_cspline<double>(x, y));
+    pp_type gtau(ir_basis::construct_piecewise_polynomial_cspline<double>(x, y));
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
