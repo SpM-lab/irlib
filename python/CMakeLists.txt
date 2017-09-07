@@ -10,7 +10,6 @@ find_package(PythonInterp REQUIRED)
 message("Found Python executable: " ${PYTHON_EXECUTABLE})
 message("Python version: " ${PYTHON_VERSION_STRING})
 
-#find_package(PythonLibs EXACT ${PYTHON_VERSION_STRING} REQUIRED)
 find_package(PythonLibs REQUIRED)
 message("Found Python libs: " ${PYTHON_LIBRARIES})
 message("Python libs version: " ${PYTHONLIBS_VERSION_STRING})
@@ -30,10 +29,8 @@ include(${SWIG_USE_FILE})
 include(GenerateExportHeader)
 
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_BINARY_DIR}
-    ${PYTHON_INCLUDE_PATH}
-    ${NUMPY_INCLUDE_DIRS}
+        ${PYTHON_INCLUDE_PATH}
+        ${NUMPY_INCLUDE_DIRS}
 )
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -48,13 +45,7 @@ set_source_files_properties(${GF_INTERFACE_FILES} PROPERTIES CPLUSPLUS ON)
 swig_add_library(basis LANGUAGE python SOURCES ${GF_INTERFACE_FILES} ${GF_SRCS})
 swig_link_libraries(basis ${PYTHON_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
 
-include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_SOURCE_DIR}/c++/include/irlib
-        ${PROJECT_BINARY_DIR}
-        ${PYTHON_INCLUDE_PATH}
-        ${NUMPY_INCLUDE_DIRS}
-)
-
 install(TARGETS _basis DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/basis.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
+
+add_subdirectory("test")

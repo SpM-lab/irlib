@@ -26,3 +26,7 @@ function(add_gtest test)
     add_test(NAME ${test} COMMAND ${test} ${test_xml_output})
 endfunction(add_gtest)
 
+function(add_python_test test)
+    add_test(NAME "${test} (Python)" COMMAND ${PYTHON_EXECUTABLE} ${test}.py)
+    #add_test(NAME basis_test COMMAND ${PYTHON_EXECUTABLE} basis_test.py)
+endfunction(add_python_test)

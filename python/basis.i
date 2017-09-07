@@ -7,8 +7,8 @@
 
 %include "std_string.i"
 %include "std_vector.i"
-%include "../../common/swig/numpy.i"
-%include "../../common/swig/multi_array.i"
+%include "../common/swig/numpy.i"
+%include "../common/swig/multi_array.i"
 
 %init %{
    import_array();
