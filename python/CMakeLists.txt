@@ -29,15 +29,11 @@ find_package(SWIG REQUIRED 3.0)
 include(${SWIG_USE_FILE})
 include(GenerateExportHeader)
 
-#Get include dirs from alps-gf (FIXME: take care of all ALPSCore modules)
-#get_target_property(ALPSCore_INCLUDE_DIR alps::alps-gf INTERFACE_INCLUDE_DIRECTORIES)
-
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${PROJECT_BINARY_DIR}
     ${PYTHON_INCLUDE_PATH}
     ${NUMPY_INCLUDE_DIRS}
-    ${ALPSCore_INCLUDE_DIR}
 )
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -58,7 +54,6 @@ include_directories(
         ${PROJECT_BINARY_DIR}
         ${PYTHON_INCLUDE_PATH}
         ${NUMPY_INCLUDE_DIRS}
-        ${ALPSCore_INCLUDE_DIR}
 )
 
 install(TARGETS _basis DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)

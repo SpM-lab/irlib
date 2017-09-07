@@ -46,5 +46,5 @@ endforeach(test)
 
 install(DIRECTORY "c++/include" DESTINATION "." FILES_MATCHING PATTERN "*.hpp")
 
-
 add_subdirectory(python)
+add_subdirectory(python-test)

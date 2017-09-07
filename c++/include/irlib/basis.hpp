@@ -153,7 +153,7 @@ namespace irlib {
          * @param cutoff  we drop basis functions corresponding to small singular values  |s_l/s_0~ < cutoff.
          * @param N       dimension of matrices for SVD. 500 may be big enough al least up to Lambda = 10^4.
          */
-        ir_basis_set(const kernel<Scalar> &knl, int max_dim, double cutoff = 1e-10, int N = 501);
+        ir_basis_set(const kernel<Scalar> &knl, int max_dim, double cutoff = 1e-10, int N = 501) throw(std::runtime_error);
 
     private:
         boost::shared_ptr<kernel<Scalar> > p_knl_;
@@ -165,7 +165,22 @@ namespace irlib {
          * @param x    x = 2 * tau/beta - 1  (-1 <= x <= 1)
          * @param val  results
          */
-        void value(double x, std::vector<double> &val) const;
+#ifndef SWIG
+        void values(double x, std::vector<double> &val) const;
+#endif
+
+        double value(double x, int l) const {
+            assert(x >= -1.00001 && x <= 1.00001);
+            assert(l >= 0 && l < dim());
+
+            return basis_functions_[l].compute_value(x);
+        }
+
+        std::vector<double> values(double x) const {
+            std::vector<double> val;
+            values(x, val);
+            return val;
+        }
 
         /**
          * Return a reference to the l-th basis function
@@ -250,7 +265,7 @@ namespace irlib {
      */
     class basis_f : public ir_basis_set<double> {
     public:
-        basis_f(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501)
+        basis_f(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501) throw(std::runtime_error)
                 : ir_basis_set<double>(fermionic_kernel(Lambda), max_dim, cutoff, N) {}
     };
 
@@ -259,7 +274,7 @@ namespace irlib {
      */
     class basis_b : public ir_basis_set<double> {
     public:
-        basis_b(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501)
+        basis_b(double Lambda, int max_dim, double cutoff = 1e-10, int N = 501) throw(std::runtime_error)
                 : ir_basis_set<double>(bosonic_kernel(Lambda), max_dim, cutoff, N) {}
     };
 }
