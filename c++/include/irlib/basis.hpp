@@ -166,17 +166,17 @@ namespace irlib {
          * @param val  results
          */
 #ifndef SWIG
-        void values(double x, std::vector<double> &val) const;
+        void values(double x, std::vector<double> &val) const throw(std::runtime_error);
 #endif
 
-        double value(double x, int l) const {
+        double value(double x, int l) const throw(std::runtime_error) {
             assert(x >= -1.00001 && x <= 1.00001);
             assert(l >= 0 && l < dim());
 
             return basis_functions_[l].compute_value(x);
         }
 
-        std::vector<double> values(double x) const {
+        std::vector<double> values(double x) const throw(std::runtime_error) {
             std::vector<double> val;
             values(x, val);
             return val;
@@ -187,12 +187,12 @@ namespace irlib {
          * @param l l-th basis function
          * @return  reference to the l-th basis function
          */
-        const irlib::piecewise_polynomial<double> &operator()(int l) const { return basis_functions_[l]; }
+        const irlib::piecewise_polynomial<double> &operator()(int l) const throw(std::runtime_error) { return basis_functions_[l]; }
 
         /**
          * Return a reference to all basis functions
          */
-        const std::vector<irlib::piecewise_polynomial<double> > all() const { return basis_functions_; }
+        //const std::vector<irlib::piecewise_polynomial<double> > all() const { return basis_functions_; }
 
         /**
          * Return number of basis functions

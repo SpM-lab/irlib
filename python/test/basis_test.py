@@ -1,7 +1,6 @@
 import unittest
 import numpy
-import irlib.basis
-
+from basis import *
 
 class TestStringMethods(unittest.TestCase):
 
@@ -21,7 +20,7 @@ class TestStringMethods(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    b = irlib.basis.basis_f(100.0, 10)
+    b = basis_f(100.0, 10)
     b.compute_Tnl(numpy.array([0, 1, 2]))
 
 #https://cmake.org/pipermail/cmake/2012-May/050120.html

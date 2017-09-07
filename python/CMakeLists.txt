@@ -48,4 +48,9 @@ swig_link_libraries(basis ${PYTHON_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARI
 install(TARGETS _basis DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/basis.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 
-add_subdirectory("test")
+#configure_file(${CMAKE_SOURCE_DIR}/common/cmake/sitecustomize.py ${CMAKE_CURRENT_BINARY_DIR}/sitecustomize.py @ONLY)
+
+
+if (Testing)
+  add_subdirectory("test")
+endif()

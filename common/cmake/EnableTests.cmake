@@ -27,6 +27,7 @@ function(add_gtest test)
 endfunction(add_gtest)
 
 function(add_python_test test)
-    add_test(NAME "${test} (Python)" COMMAND ${PYTHON_EXECUTABLE} ${test}.py)
+    add_test(NAME ${test} COMMAND ${PYTHON_EXECUTABLE} ${test}.py)
     #add_test(NAME basis_test COMMAND ${PYTHON_EXECUTABLE} basis_test.py)
+    set_tests_properties(${test} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/python")
 endfunction(add_python_test)

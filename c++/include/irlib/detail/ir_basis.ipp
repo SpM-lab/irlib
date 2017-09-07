@@ -233,7 +233,7 @@ namespace irlib {
 
     template<typename Scalar>
     void
-    ir_basis_set<Scalar>::values(double x, std::vector<double> &val) const {
+    ir_basis_set<Scalar>::values(double x, std::vector<double> &val) const throw(std::runtime_error) {
       assert(val.size() >= basis_functions_.size());
       assert(x >= -1.00001 && x <= 1.00001);
 

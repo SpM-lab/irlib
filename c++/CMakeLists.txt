@@ -7,11 +7,10 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${BLAS_LINKER_FLAGS} ${LAP
 install(DIRECTORY "include" DESTINATION "." FILES_MATCHING PATTERN "*.hpp")
 
 
-#testing source files
-set(unittest_src unittest)
-
-
-foreach(test ${unittest_src})
-    add_gtest(${test} test)
-endforeach(test)
-
+if (Testing)
+  #testing source files
+  set(unittest_src unittest)
+  foreach(test ${unittest_src})
+      add_gtest(${test} test)
+  endforeach(test)
+endif()
