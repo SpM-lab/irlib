@@ -26,12 +26,12 @@ Gtau_exact = Gx(xs)
 # Number of Matsubara freq for which G(iomega_n) will be reconstructed
 niw = 100
 
-ni_reconstruct = 15
+ni_reconstruct = 20
 
 ## Construct basis
 idx = 0
 markers = ['o', 's', 'x', '+']
-for Lambda in [0.0, 100.0, 1000.0, 10000.0]:
+for Lambda in [0.0, 500.0, 5000.0]:
     max_dim = 50
     b = irlib.basis.basis_f(Lambda, max_dim)
 

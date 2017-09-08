@@ -4,6 +4,8 @@ C++ header-file only library for generating kernel "intermediate-representation"
 
 # Table of Contents
 - [Requirements](#requirements)
+- [Installation](#installation)
+- [Examples](#examples)
 
 ## Requirements
 ### C++11 compiler
@@ -20,7 +22,7 @@ Header-file libraries for linear algebra. Eigen Tensor library in unsupported mo
 ### Python 2.7 or 3.5
 For generating Python bindings
 
-## Manual source installation
+## Installation
 ```
 $ export BOOST_ROOT=/opt/boost_1_63
 $ cmake \
@@ -36,3 +38,6 @@ $ cmake \
     path_to_source_file_directory
 $ make && sudo make install
 ```
+
+## Examples
+You can find examples below the directory "examples" in the source directory.
