@@ -19,9 +19,11 @@ message(STATUS "Redifine CMAKE_INSTALL_PREFIX if you wish to change install loca
 find_package(Boost 1.55.0 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(LAPACK REQUIRED) #For SVD
+find_package(MPFR 2.3.1 REQUIRED)
+find_package(GMP REQUIRED) #TO DO: version check (>=4.2.1) & MPIR support
 
 #include directories
-set(IRLIB_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS}  "c++/include" "test") #rest taken care of by libraries dependencies
+set(IRLIB_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS} ${MPFR_INCLUDES} ${GMP_INCLUDE_DIR} "c++/include" "thirdparty/mpfr_cxx" "test") #rest taken care of by libraries dependencies
 include_directories(${IRLIB_LIBRARY_INCLUDE_DIRS})
 
 #Python bindings

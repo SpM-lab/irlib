@@ -8,3 +8,5 @@ namespace irlib {
         };
     }
 }
+
+#include <mpreal.h>
