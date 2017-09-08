@@ -172,11 +172,20 @@ namespace irlib {
         double value(double x, int l) const throw(std::runtime_error) {
             assert(x >= -1.00001 && x <= 1.00001);
             assert(l >= 0 && l < dim());
+            if (l < 0 || l >= dim()) {
+                throw std::runtime_error("Invalid index of basis function!");
+            }
+            if (x < -1 || x > 1) {
+                throw std::runtime_error("Invalid value of x!");
+            }
 
             return basis_functions_[l].compute_value(x);
         }
 
         std::vector<double> values(double x) const throw(std::runtime_error) {
+            if (x < -1 || x > 1) {
+                throw std::runtime_error("Invalid value of x!");
+            }
             std::vector<double> val;
             values(x, val);
             return val;

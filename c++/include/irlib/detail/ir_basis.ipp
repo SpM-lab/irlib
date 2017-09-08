@@ -236,6 +236,9 @@ namespace irlib {
     ir_basis_set<Scalar>::values(double x, std::vector<double> &val) const throw(std::runtime_error) {
       assert(val.size() >= basis_functions_.size());
       assert(x >= -1.00001 && x <= 1.00001);
+      if (x < -1 || x > 1) {
+        throw std::runtime_error("Invalid value of x!");
+      }
 
       const int dim = basis_functions_.size();
 

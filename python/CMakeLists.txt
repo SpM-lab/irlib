@@ -5,6 +5,10 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/common/cmake)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+#find_package(PythonLibs REQUIRED)
+#message("PYTHON_LIBRARY:            ${PYTHON_LIBRARY}")
+#message("PYTHONLIBS_VERSION_STRING: ${PYTHONLIBS_VERSION_STRING}")
+
 #If this does not find the correct one, please use invoke cmake with -DPYTHON_EXECUTABLE=/path/to/your/python/executable.
 find_package(PythonInterp REQUIRED)
 message("Found Python executable: " ${PYTHON_EXECUTABLE})
@@ -17,7 +21,7 @@ message("Python libraries: " ${PYTHON_LIBRARIES})
 message("Python include dirs: " ${PYTHON_INCLUDE_DIRS})
 
 if (NOT PYTHONLIBS_VERSION_STRING STREQUAL PYTHON_VERSION_STRING)
-    message(FATAL_ERROR "Version mismatch between Python interpreter and libs")
+    message(WARNING "Version mismatch between Python interpreter and libs: " ${PYTHONLIBS_VERSION_STRING} " and " ${PYTHON_VERSION_STRING})
 endif()
 
 find_package(NumPy REQUIRED)
@@ -29,11 +33,11 @@ include(${SWIG_USE_FILE})
 include(GenerateExportHeader)
 
 include_directories(
-        ${PYTHON_INCLUDE_PATH}
+        ${PYTHON_INCLUDE_DIRS}
         ${NUMPY_INCLUDE_DIRS}
 )
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from __future__ import print_function; from distutils.sysconfig import get_python_lib; print(get_python_lib())" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 
