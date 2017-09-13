@@ -10,3 +10,6 @@ namespace irlib {
 }
 
 #include <mpreal.h>
+#include <Eigen/MPRealSupport>
+
+using MatrixXmp = Eigen::Matrix<mpfr::mpreal,Eigen::Dynamic,Eigen::Dynamic>;

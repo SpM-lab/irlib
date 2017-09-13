@@ -170,4 +170,4 @@ namespace irlib {
     };
 }
 
-#include "detail/ir_basis.ipp"
+#include "detail/ir_basis_new.ipp"

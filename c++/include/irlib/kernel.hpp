@@ -90,7 +90,7 @@ namespace irlib {
             const double limit = 200.0;
             mpfr::mpreal half_Lambda = mpfr::mpreal("0.5") * mpfr::mpreal(Lambda_);
 
-            if (std::abs(Lambda_ * y) < 1e-10) {
+            if (std::abs(Lambda_ * y) < 1e-30) {
                 return mpfr::exp(-half_Lambda * x * y) / Lambda_;
             } else if (Lambda_ * y > limit) {
                 return y * mpfr::exp(-half_Lambda * x * y - half_Lambda * y);
