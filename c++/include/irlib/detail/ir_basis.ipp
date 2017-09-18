@@ -62,6 +62,7 @@ namespace irlib {
      * @param x_array  values of x
      * @param y_array  values of y
      */
+/*
     template<typename T>
     irlib::piecewise_polynomial<T> construct_piecewise_polynomial_cspline(
         const std::vector<double> &x_array, const std::vector<double> &y_array) {
@@ -83,9 +84,11 @@ namespace irlib {
       irlib::piecewise_polynomial<T> tmp(n_section, x_array, coeff);
       return irlib::piecewise_polynomial<T>(n_section, x_array, coeff);
     };
+    */
 
 
     /// do a svd for the given parity sector (even or odd)
+    /*
     template<typename T>
     void do_svd(const kernel <T> &knl, int parity, int N, double cutoff_singular_values,
                 std::vector<double> &singular_values,
@@ -182,6 +185,7 @@ namespace irlib {
       orthonormalize(basis_functions);
       assert(singular_values.size() == basis_functions.size());
     }
+    */
 
     template<typename Scalar>
     ir_basis_set<Scalar>::ir_basis_set(const kernel <Scalar> &knl, int max_dim, double cutoff, int N) throw(std::runtime_error) : p_knl_(knl.clone()) {

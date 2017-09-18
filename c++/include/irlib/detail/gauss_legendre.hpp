@@ -1,15 +1,18 @@
 
+#pragma once
+
 #include <vector>
 #include <utility>
 
-namespace {
+namespace irlib {
+namespace detail {
 
 template<typename T>
 std::vector<std::pair<T,T>>
-gauss_legendre_nodes(int degree) {
+gauss_legendre_nodes(int num_nodes) {
 
 
-    if (degree == 2) {
+    if (num_nodes == 6) {
         std::vector<std::pair<T,T>> nodes(6);
 
         nodes[0] = std::make_pair<T>(T("0.93246951420315202781230155449399460913476573771229"), T("0.17132449237917034504029614217273289352682250148404"));
@@ -23,7 +26,7 @@ gauss_legendre_nodes(int degree) {
     }
 
 
-    if (degree == 3) {
+    if (num_nodes == 12) {
         std::vector<std::pair<T,T>> nodes(12);
 
         nodes[0] = std::make_pair<T>(T("0.98156063424671925069054909014928082296015519981373"), T("0.047175336386511827194615961485017060317029073994847"));
@@ -43,7 +46,7 @@ gauss_legendre_nodes(int degree) {
     }
 
 
-    if (degree == 4) {
+    if (num_nodes == 24) {
         std::vector<std::pair<T,T>> nodes(24);
 
         nodes[0] = std::make_pair<T>(T("0.995187219997021360179997409700736811874597692596"), T("0.012341229799987199546805667070037291575910040891367"));
@@ -75,7 +78,7 @@ gauss_legendre_nodes(int degree) {
     }
 
 
-    if (degree == 5) {
+    if (num_nodes == 48) {
         std::vector<std::pair<T,T>> nodes(48);
 
         nodes[0] = std::make_pair<T>(T("0.99877100725242611860054149156311364008893765027672"), T("0.0031533460523058386326773115438914875782839388316936"));
@@ -131,7 +134,7 @@ gauss_legendre_nodes(int degree) {
     }
 
 
-    if (degree == 6) {
+    if (num_nodes == 96) {
         std::vector<std::pair<T,T>> nodes(96);
 
         nodes[0] = std::make_pair<T>(T("0.99968950388323076682769010578436551928154546273246"), T("0.00079679206555201242943814349694356875993108692282687"));
@@ -235,8 +238,9 @@ gauss_legendre_nodes(int degree) {
     }
 
 
-    throw std::runtime_error("Invalid degree passed to gauss_legendre_nodes");
+    throw std::runtime_error("Invalid num_nodes passed to gauss_legendre_nodes");
 }
 
+}
 }
 

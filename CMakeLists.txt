@@ -11,9 +11,14 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/common/cmake)
 # Print build type
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+# Build doc
+option(BUILD_DOCUMENTATION "Build documentations" OFF)
+
 # Where to install?
 message(STATUS "C++ libraries Will be installed in ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Redifine CMAKE_INSTALL_PREFIX if you wish to change install location")
+message(STATUS "BUILDDOC" ${BUILD_DOCUMENTATION})
+
 
 ### Dependencies
 find_package(Boost 1.55.0 REQUIRED)
@@ -21,6 +26,9 @@ find_package(Eigen3 REQUIRED)
 find_package(LAPACK REQUIRED) #For SVD
 find_package(MPFR 2.3.1 REQUIRED)
 find_package(GMP REQUIRED) #TO DO: version check (>=4.2.1) & MPIR support
+if (BUILD_DOCUMENTATION)
+  find_package(Doxygen REQUIRED)
+endif()
 
 #include directories
 set(IRLIB_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS} ${MPFR_INCLUDES} ${GMP_INCLUDE_DIR} "c++/include" "thirdparty/mpfr_cxx" "test") #rest taken care of by libraries dependencies

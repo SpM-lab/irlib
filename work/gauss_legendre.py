@@ -9,14 +9,17 @@ prec = int(dps * 3.33333)
 mp.pretty = False
 
 print("""
+#pragma once
+
 #include <vector>
 #include <utility>
 
-namespace {
+namespace irlib {
+namespace detail {
 
 template<typename T>
 std::vector<std::pair<T,T>>
-gauss_legendre_nodes(int degree) {
+gauss_legendre_nodes(int num_nodes) {
 """)
 
 #Note: mpmath gives wrong results for degree==1! 
@@ -29,9 +32,9 @@ for degree in range(2,7):
     N = 3*2**(degree-1)
 
     print("""
-    if (degree == %d) {
+    if (num_nodes == %d) {
         std::vector<std::pair<T,T>> nodes(%d);
-"""%(degree,N))
+"""%(N,N))
 
     for i in range(len(gl)):
         print(
@@ -44,8 +47,9 @@ for degree in range(2,7):
 """)
 
 print("""
-    throw std::runtime_error("Invalid degree passed to gauss_legendre_nodes");
+    throw std::runtime_error("Invalid num_nodes passed to gauss_legendre_nodes");
 }
 
+}
 }
 """)

@@ -9,7 +9,7 @@ install(DIRECTORY "include" DESTINATION "." FILES_MATCHING PATTERN "*.hpp")
 
 if (Testing)
   #testing source files
-  set(unittest_src unittest mpmath)
+  set(unittest_src unittest mpmath kernel)
   foreach(test ${unittest_src})
       add_gtest(${test} test)
   endforeach(test)

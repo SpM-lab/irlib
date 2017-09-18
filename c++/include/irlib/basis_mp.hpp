@@ -169,5 +169,3 @@ namespace irlib {
                 : ir_basis_set<double>(bosonic_kernel(Lambda), max_dim, cutoff, N) {}
     };
 }
-
-#include "detail/ir_basis_new.ipp"
