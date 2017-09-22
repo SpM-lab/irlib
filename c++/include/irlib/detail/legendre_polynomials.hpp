@@ -55,7 +55,7 @@ namespace irlib {
      * @return   Two dimension arrays (l, d). l is the index of polynoamials. d is the order of the derivatives.
      */
     inline std::vector<std::vector<mpfr::mpreal>>
-    legendre_p_derivatives(unsigned int Nl, const mpfr::mpreal &x) {
+    normalized_legendre_p_derivatives(unsigned int Nl, const mpfr::mpreal &x) {
         using mpfr::mpreal;
         using matrix_t = Eigen::Matrix<mpfr::mpreal, Eigen::Dynamic, Eigen::Dynamic>;
         using vector_t = Eigen::Matrix<mpfr::mpreal, Eigen::Dynamic, 1>;

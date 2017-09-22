@@ -144,6 +144,7 @@ namespace irlib {
         }
 
         void check_validity() const {
+            assert(section_edges_.size() > 0);
             if (!valid_) {
                 throw std::runtime_error("pieacewise_polynomial object is not properly constructed!");
             }
@@ -187,6 +188,7 @@ namespace irlib {
                                                                       n_sections_(section_edges.size() - 1),
                                                                       section_edges_(section_edges),
                                                                       coeff_(coeff), valid_(false) {
+            assert(n_section == section_edges.size()-1);
             set_validity();
             check_validity();//this may throw
         };

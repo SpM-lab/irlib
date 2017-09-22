@@ -90,7 +90,7 @@ TEST(mpmath, normalized_legendre_polynomials_derivatives) {
 
     int Nl = 3;
     mpreal x(1);
-    auto deriv = irlib::legendre_p_derivatives(Nl, x);
+    auto deriv = irlib::normalized_legendre_p_derivatives(Nl, x);
 
     //0-th normalized Legendre polynomial
     ASSERT_TRUE(mpfr::abs(deriv[0][0]-1/mpfr::sqrt(2)) < 1e-40);

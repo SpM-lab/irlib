@@ -2,28 +2,34 @@
 
 #include <algorithm>
 
-#include <boost/math/special_functions/legendre.hpp>
 #include <Eigen/Core>
 #include <Eigen/CXX11/Tensor>
 
 #include "../piecewise_polynomial.hpp"
-
-extern "C" void dgesvd_(const char *jobu, const char *jobvt,
-                        const int *m, const int *n, double *a, const int *lda,
-                        double *s, double *u, const int *ldu,
-                        double *vt, const int *ldvt,
-                        double *work, const int *lwork, int *info);
-
-extern "C" void dgesdd_(const char *jobz,
-                        const int *m, const int *n, double *a, const int *lda,
-                        double *s, double *u, const int *ldu,
-                        double *vt, const int *ldvt,
-                        double *work, const int *lwork, const int *iwork, int *info);
+#include "spline.hpp"
 
 namespace irlib {
     template<typename T>
     irlib::piecewise_polynomial<T> construct_piecewise_polynomial_cspline(
-            const std::vector<double> &x_array, const std::vector<double> &y_array);
+            const std::vector<double> &x_array, const std::vector<double> &y_array) {
+        const int n_points = x_array.size();
+        const int n_section = n_points - 1;
+
+        boost::multi_array<double, 2> coeff(boost::extents[n_section][4]);
+
+        // Cubic spline interpolation
+        tk::spline spline;
+        spline.set_points(x_array, y_array);
+
+        // Construct piecewise_polynomial
+        for (int s = 0; s < n_section; ++s) {
+            for (int p = 0; p < 4; ++p) {
+                coeff[s][p] = spline.get_coeff(s, p);
+            }
+        }
+        irlib::piecewise_polynomial<T> tmp(n_section, x_array, coeff);
+        return irlib::piecewise_polynomial<T>(n_section, x_array, coeff);
+    };
 
     template<typename T>
     inline std::vector<T> linspace(T minval, T maxval, int N) {
@@ -380,6 +386,7 @@ namespace irlib {
  * @param bf_src orthogonal basis functions. They must be piecewise polynomials of the same order.
  * @param Tnl  computed transformation matrix
  */
+    /*
     template<class T>
     void compute_transformation_matrix_to_matsubara(
             int n_min, int n_max,
@@ -411,6 +418,7 @@ namespace irlib {
             }
         }
     }
+     */
 
     /**
     * Compute a transformation matrix from a give orthogonal basis set to Matsubara freq.
@@ -680,6 +688,7 @@ namespace irlib {
         return results;
     }
 
+    /*
     template<class Matrix, class Vector>
     void svd_square_matrix(Matrix &K, int n, Vector &S, Matrix &Vt, Matrix &U) {
         char jobu = 'S';
@@ -710,6 +719,7 @@ namespace irlib {
             throw std::runtime_error("SVD failed to converge!");
         }
     }
+     */
 
     /**
      * Find approximate positions of nodes for the even singular vectors with the lowest singular value larger than a cutoff
@@ -720,7 +730,8 @@ namespace irlib {
      * @return positions of nodes
      */
     template<typename Kernel>
-    std::vector<double> compute_approximate_nodes_even_sector(const Kernel &knl, int N, double cutoff_singular_values) {
+    std::pair<std::vector<double>,std::vector<double>>
+    compute_approximate_nodes_even_sector(const Kernel &knl, int N, double cutoff_singular_values) {
         typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
 
         double de_cutoff = 2.5;
@@ -754,9 +765,13 @@ namespace irlib {
         }
 
         //Perform SVD
-        Eigen::VectorXd svalues(N);
-        matrix_t U(N, N), Vt(N, N);
-        svd_square_matrix(K, N, svalues, Vt, U);
+        //Eigen::VectorXd svalues(N);
+        //matrix_t U(N, N), Vt(N, N);
+        //svd_square_matrix(K, N, svalues, Vt, U);
+        Eigen::BDCSVD<matrix_t> svd(K, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        const Eigen::VectorXd& svalues = svd.singularValues();
+        const matrix_t& U = svd.matrixU();
+        const matrix_t& V = svd.matrixV();
 
         //Count non-zero SV
         int dim = N;
@@ -768,15 +783,20 @@ namespace irlib {
         }
 
         //find nodes
-        std::vector<double> nodes;
+        std::vector<double> nodes_x, nodes_y;
         for (int i = 0; i < N - 1; ++i) {
             if (U(i, dim - 1) * U(i + 1, dim - 1) < 0.0) {
-                nodes.push_back(0.5 * (x_vec[i] + x_vec[i + 1]));
+                nodes_x.push_back(0.5 * (x_vec[i] + x_vec[i + 1]));
+            }
+            if (V(i, dim - 1) * V(i+1, dim - 1) < 0.0) {
+                nodes_y.push_back(0.5 * (y_vec[i] + y_vec[i + 1]));
             }
         }
 
-        if (nodes.size() != dim - 1) {
+        if (nodes_x.size() != dim - 1 || nodes_y.size() != dim - 1) {
             throw std::runtime_error("The number of nodes is wrong.");
         }
+
+        return std::make_pair(nodes_x, nodes_y);
     }
 }

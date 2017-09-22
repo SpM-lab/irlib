@@ -23,7 +23,6 @@ message(STATUS "BUILDDOC" ${BUILD_DOCUMENTATION})
 ### Dependencies
 find_package(Boost 1.55.0 REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(LAPACK REQUIRED) #For SVD
 find_package(MPFR 2.3.1 REQUIRED)
 find_package(GMP REQUIRED) #TO DO: version check (>=4.2.1) & MPIR support
 if (BUILD_DOCUMENTATION)

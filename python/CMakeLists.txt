@@ -47,7 +47,7 @@ set(GF_INTERFACE_FILES basis.i)
 
 set_source_files_properties(${GF_INTERFACE_FILES} PROPERTIES CPLUSPLUS ON)
 swig_add_library(basis LANGUAGE python SOURCES ${GF_INTERFACE_FILES} ${GF_SRCS})
-swig_link_libraries(basis ${PYTHON_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+swig_link_libraries(basis ${PYTHON_LIBRARIES} ${GMP_LIBRARIES} ${MPFR_LIBRARIES})
 
 install(TARGETS _basis DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/basis.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
