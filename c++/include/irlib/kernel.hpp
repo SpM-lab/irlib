@@ -175,32 +175,41 @@ namespace irlib {
 
         using matrix_type = Eigen::Matrix<mp_type, Eigen::Dynamic, Eigen::Dynamic>;
 
-        int num_sec = section_edges_x.size() - 1;
+        int num_sec_x = section_edges_x.size() - 1;
+        int num_sec_y = section_edges_y.size() - 1;
 
         // nodes for Gauss-Legendre integration
         std::vector<std::pair<mp_type, mp_type >> nodes = detail::gauss_legendre_nodes<mp_type>(num_local_nodes);
         auto nodes_x = detail::composite_gauss_legendre_nodes(section_edges_x, nodes);
         auto nodes_y = detail::composite_gauss_legendre_nodes(section_edges_y, nodes);
 
-        std::vector<matrix_type> phi_x(num_sec);
-        std::vector<matrix_type> phi_y(num_sec);
-        for (int s = 0; s < num_sec; ++s) {
+        std::vector<matrix_type> phi_x(num_sec_x);
+        for (int s = 0; s < num_sec_x; ++s) {
             phi_x[s] = matrix_type(Nl, num_local_nodes);
-            phi_y[s] = matrix_type(Nl, num_local_nodes);
             for (int n = 0; n < num_local_nodes; ++n) {
                 for (int l = 0; l < Nl; ++l) {
                     auto leg_val = normalized_legendre_p(l, nodes[n].first);
                     phi_x[s](l, n) = mpfr::sqrt(mp_type(2) / (section_edges_x[s + 1] - section_edges_x[s])) * leg_val *
                                      nodes_x[s * num_local_nodes + n].second;
+                }
+            }
+        }
+
+        std::vector<matrix_type> phi_y(num_sec_y);
+        for (int s = 0; s < num_sec_y; ++s) {
+            phi_y[s] = matrix_type(Nl, num_local_nodes);
+            for (int n = 0; n < num_local_nodes; ++n) {
+                for (int l = 0; l < Nl; ++l) {
+                    auto leg_val = normalized_legendre_p(l, nodes[n].first);
                     phi_y[s](l, n) = mpfr::sqrt(mp_type(2) / (section_edges_y[s + 1] - section_edges_y[s])) * leg_val *
                                      nodes_y[s * num_local_nodes + n].second;
                 }
             }
         }
 
-        matrix_type K_mat(num_sec * Nl, num_sec * Nl);
-        for (int s2 = 0; s2 < num_sec; ++s2) {
-            for (int s = 0; s < num_sec; ++s) {
+        matrix_type K_mat(num_sec_x * Nl, num_sec_y * Nl);
+        for (int s2 = 0; s2 < num_sec_y; ++s2) {
+            for (int s = 0; s < num_sec_x; ++s) {
 
                 matrix_type K_nn(num_local_nodes, num_local_nodes);
                 for (int n = 0; n < num_local_nodes; ++n) {
@@ -237,10 +246,16 @@ namespace irlib {
             int Nl,
             int num_nodes_gauss_legendre,
             const std::vector<mpfr::mpreal>& section_edges_x,
-            const std::vector<mpfr::mpreal>& section_edges_y
+            const std::vector<mpfr::mpreal>& section_edges_y,
+            std::vector<double>& residual_x,
+            std::vector<double>& residual_y
     ) throw(std::runtime_error) {
         using mpfr::mpreal;
         using vector_t = Eigen::Matrix<mpreal, Eigen::Dynamic, 1>;
+
+        if (Nl < 2) {
+            throw std::runtime_error("Nl < 2!");
+        }
 
         // Compute Kernel matrix and do SVD for even/odd sector
         auto kernel_even = [&](const mpreal& x, const mpreal& y) { return kernel(x, y) + kernel(x, -y); };
@@ -339,6 +354,16 @@ namespace irlib {
             }
         }
 
+        residual_x.resize(section_edges_x.size()-1);
+        for (int s=0; s < residual_x.size(); ++s) {
+            residual_x[s] = static_cast<double>(pow(Uvec.back()(s*Nl+Nl-1),2) + pow(Uvec.back()(s*Nl+Nl-2),2));
+        }
+
+        residual_y.resize(section_edges_y.size()-1);
+        for (int s=0; s < residual_y.size(); ++s) {
+            residual_y[s] = static_cast<double>(pow(Vvec.back()(s*Nl+Nl-1),2) + pow(Vvec.back()(s*Nl+Nl-2),2));
+        }
+
         return std::make_tuple(sv, u_basis_pp, v_basis_pp);
     }
 
@@ -352,7 +377,8 @@ namespace irlib {
             int max_dim,
             double sv_cutoff = 1e-12,
             int Nl = 10,
-            int num_nodes_gauss_legendre = 12
+            int num_nodes_gauss_legendre = 12,
+            double aeps = 1e-8
     ) throw(std::runtime_error) {
         using mpfr::mpreal;
         using vector_t = Eigen::Matrix<mpreal, Eigen::Dynamic, 1>;
@@ -366,9 +392,10 @@ namespace irlib {
         }
 
         // Compute approximate positions of nodes of the highest basis function in the even sector
-        std::vector<double> nodes_x, nodes_y;
-        std::tie(nodes_x, nodes_y) = compute_approximate_nodes_even_sector(kernel, 250, 1e-12);
+        //std::vector<double> nodes_x, nodes_y;
+        //std::tie(nodes_x, nodes_y) = compute_approximate_nodes_even_sector(kernel, 250, 1e-12);
 
+        /*
         auto gen_section_edges = [](const std::vector<double>& nodes) {
             std::vector<mpreal> section_edges;
             section_edges.push_back(0);
@@ -378,15 +405,44 @@ namespace irlib {
             section_edges.push_back(1);
             return section_edges;
         };
-        std::vector<mpreal> section_edges_x = gen_section_edges(nodes_x);
-        std::vector<mpreal> section_edges_y = gen_section_edges(nodes_y);
-        //std::cout << " C " << std::endl;
+        */
 
-        auto r = generate_ir_basis_functions_impl(kernel, max_dim, sv_cutoff, Nl, num_nodes_gauss_legendre,
-                                                section_edges_x,
-                                                section_edges_y
-        );
-        return r;
+        auto u = [](const std::vector<mpreal>& section_edges,
+                                       std::vector<double>& residual, double eps) {
+            std::vector<mpreal> section_edges_new(section_edges);
+            for (int s=0; s<section_edges.size()-1; ++s) {
+                if (residual[s] > eps) {
+                    section_edges_new.push_back(
+                            (section_edges[s]+section_edges[s+1])/2
+                    );
+                }
+            }
+            std::sort(section_edges_new.begin(), section_edges_new.end());
+            return section_edges_new;
+        };
+
+        std::vector<mpreal> section_edges_x = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
+        std::vector<mpreal> section_edges_y = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
+
+        while(true) {
+            std::vector<double> residual_x, residual_y;
+            auto r = generate_ir_basis_functions_impl(kernel, max_dim, sv_cutoff, Nl, num_nodes_gauss_legendre,
+                                                    section_edges_x,
+                                                    section_edges_y,
+                                                    residual_x,
+                                                    residual_y
+            );
+            int ns = section_edges_x.size() + section_edges_y.size();
+
+            section_edges_x = u(section_edges_x, residual_x, aeps);
+            section_edges_y = u(section_edges_y, residual_y, aeps);
+            //std::cout << section_edges_x.size() << " " << section_edges_y.size() << std::endl;
+
+            if (section_edges_x.size() + section_edges_y.size() == ns) {
+                return r;
+            }
+        }
+
     };
 
 }

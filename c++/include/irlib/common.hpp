@@ -24,6 +24,7 @@ namespace irlib {
 
     using mpfr::abs;
     using mpfr::sqrt;
+    using mpfr::pow;
 }
 
 

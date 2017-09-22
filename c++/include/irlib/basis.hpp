@@ -144,21 +144,17 @@ namespace irlib {
                 const std::vector<long> &n_vec,
                 Eigen::Tensor<std::complex<double>, 2> &Tnl
         ) const {
-            std::cout << "AAAA" << std::endl;
             irlib::compute_transformation_matrix_to_matsubara<double>(n_vec,
                                                                                    statistics_,
                                                                                    u_basis_,
                                                                                    Tnl);
-            std::cout << "BBBB" << std::endl;
         }
 #endif
 
         Eigen::Tensor<std::complex<double>, 2>
         compute_Tnl(const std::vector<long> &n_vec) const {
             Eigen::Tensor<std::complex<double>, 2> Tnl;
-            std::cout << "AAA" << std::endl;
             compute_Tnl(n_vec, Tnl);
-            std::cout << "AAA" << std::endl;
             return Tnl;
         }
 
