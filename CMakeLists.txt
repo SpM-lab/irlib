@@ -20,7 +20,7 @@ message(STATUS "Redifine CMAKE_INSTALL_PREFIX if you wish to change install loca
 message(STATUS "BUILDDOC" ${BUILD_DOCUMENTATION})
 
 ### Dependencies
-find_package(Eigen3 REQUIRED)
+#find_package(Eigen3 REQUIRED)
 find_package(MPFR 2.3.1 REQUIRED)
 find_package(GMP REQUIRED) #TO DO: version check (>=4.2.1) & MPIR support
 if (BUILD_DOCUMENTATION)
@@ -28,6 +28,7 @@ if (BUILD_DOCUMENTATION)
 endif()
 
 #include directories
+set(EIGEN3_INCLUDE_DIR "thirdparty/eigen3")
 set(IRLIB_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS} ${MPFR_INCLUDES} ${GMP_INCLUDE_DIR} "c++/include" "thirdparty/mpfr_cxx" "test") #rest taken care of by libraries dependencies
 include_directories(${IRLIB_LIBRARY_INCLUDE_DIRS})
 
