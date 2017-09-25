@@ -26,7 +26,6 @@ For generating Python bindings
 ## Installation
 See the following sample.
 ```
-$ export BOOST_ROOT=/opt/boost_1_63
 $ cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DPYTHON_EXECUTABLE=/opt/local/bin/python2.7 \
@@ -36,8 +35,8 @@ $ cmake \
     -DCMAKE_INSTALL_PREFIX=/opt/ir_basis \
     -DEIGEN3_INCLUDE_DIR=/opt/Eigen3/include/eigen3 \
     -DTesting=ON \
-    -DCMAKE_CXX_COMPILER=mpicxx-openmpi-clang39 \
-    -DCMAKE_VERBOSE_MAKEFILE=ON ~/ClionProjects/ir_basis
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_VERBOSE_MAKEFILE=ON ~/git/irlib \
     path_to_source_file_directory
 $ make && sudo make install
 ```
