@@ -13,7 +13,7 @@
  */
 namespace irlib {
 
-    template<typename Scalar>
+    template<typename T, typename Tx>
     class piecewise_polynomial;
 
     namespace detail {
@@ -72,15 +72,15 @@ namespace irlib {
         };
 
 ///  element-Wise operations on piecewise_polynomial coefficients
-        template<typename T, typename Op>
-        piecewise_polynomial<T>
-        do_op(const piecewise_polynomial<T> &f1, const piecewise_polynomial<T> &f2, const Op &op) {
+        template<typename T, typename Tx, typename Op>
+        piecewise_polynomial<T,Tx>
+        do_op(const piecewise_polynomial<T,Tx> &f1, const piecewise_polynomial<T,Tx> &f2, const Op &op) {
             if (f1.section_edges_ != f2.section_edges_) {
                 throw std::runtime_error("Cannot add two numerical functions with different sections!");
             }
 
             const int k_new = std::max(f1.order(), f2.order());
-            piecewise_polynomial<T> result(k_new, f1.section_edges());
+            piecewise_polynomial<T,Tx> result(k_new, f1.section_edges());
 
             const int k_min = std::min(f1.order(), f2.order());
 
@@ -97,29 +97,29 @@ namespace irlib {
  * Class for representing a piecewise polynomial
  *   A function is represented by a polynomial in each section [x_n, x_{n+1}).
  */
-    template<typename T>
+    template<typename T, typename Tx>
     class piecewise_polynomial {
     private:
         int k_;
 
         typedef boost::multi_array<T, 2> coefficient_type;
 
-        template<typename TT, typename Op>
-        friend piecewise_polynomial<TT>
-        detail::do_op(const piecewise_polynomial<TT> &f1, const piecewise_polynomial<TT> &f2, const Op &op);
+        template<typename TT, typename TXX, typename Op>
+        friend piecewise_polynomial<TT,TXX>
+        detail::do_op(const piecewise_polynomial<TT,TXX> &f1, const piecewise_polynomial<TT,TXX> &f2, const Op &op);
 
-        template<typename TT>
-        friend piecewise_polynomial<TT>
-        operator+(const piecewise_polynomial<TT> &f1, const piecewise_polynomial<TT> &f2);
+        template<typename TT, typename TXX>
+        friend piecewise_polynomial<TT,TXX>
+        operator+(const piecewise_polynomial<TT,TXX> &f1, const piecewise_polynomial<TT,TXX> &f2);
 
-        template<typename TT>
-        friend piecewise_polynomial<TT>
-        operator-(const piecewise_polynomial<TT> &f1, const piecewise_polynomial<TT> &f2);
+        template<typename TT, typename TXX>
+        friend piecewise_polynomial<TT,TXX>
+        operator-(const piecewise_polynomial<TT,TXX> &f1, const piecewise_polynomial<TT,TXX> &f2);
 
-        template<typename TT>
-        friend const piecewise_polynomial<TT> operator*(TT scalar, const piecewise_polynomial<TT> &pp);
+        template<typename TT, typename TXX>
+        friend const piecewise_polynomial<TT,TXX> operator*(TT scalar, const piecewise_polynomial<TT,TXX> &pp);
 
-        template<typename TT>
+        template<typename TT, typename TXX>
         friend
         class piecewise_polynomial;
 
@@ -127,7 +127,7 @@ namespace irlib {
         int n_sections_;
 
         /// edges of sections. The first and last elements should be -1 and 1, respectively.
-        std::vector<double> section_edges_;
+        std::vector<Tx> section_edges_;
 
         /// expansion coefficients [s,l]
         /// The polynomial is represented as
@@ -137,7 +137,7 @@ namespace irlib {
 
         bool valid_;
 
-        void check_range(double x) const {
+        void check_range(Tx x) const {
             if (x < section_edges_[0] || x > section_edges_[section_edges_.size() - 1]) {
                 throw std::runtime_error("Give x is out of the range.");
             }
@@ -170,7 +170,7 @@ namespace irlib {
         piecewise_polynomial() : k_(-1), n_sections_(0), valid_(false) {};
 
         /// Construct an object set to zero
-        piecewise_polynomial(int k, const std::vector<double> &section_edges) : k_(k),
+        piecewise_polynomial(int k, const std::vector<Tx> &section_edges) : k_(k),
                                                                                 n_sections_(section_edges.size() - 1),
                                                                                 section_edges_(section_edges),
                                                                                 coeff_(boost::extents[n_sections_][k +
@@ -183,7 +183,7 @@ namespace irlib {
         };
 
         piecewise_polynomial(int n_section,
-                             const std::vector<double> &section_edges,
+                             const std::vector<Tx> &section_edges,
                              const boost::multi_array<T, 2> &coeff) : k_(coeff.shape()[1] - 1),
                                                                       n_sections_(section_edges.size() - 1),
                                                                       section_edges_(section_edges),
@@ -194,7 +194,7 @@ namespace irlib {
         };
 
         /// Copy operator
-        piecewise_polynomial<T> &operator=(const piecewise_polynomial<T> &other) {
+        piecewise_polynomial<T,Tx> &operator=(const piecewise_polynomial<T,Tx> &other) {
             k_ = other.k_;
             n_sections_ = other.n_sections_;
             section_edges_ = other.section_edges_;
@@ -219,7 +219,7 @@ namespace irlib {
         }
 
         /// Return an end point. The index i runs from 0 (smallest) to num_sections()+1 (largest).
-        inline double section_edge(int i) const {
+        inline Tx section_edge(int i) const {
             assert(i >= 0 && i < section_edges_.size());
 #ifndef NDEBUG
             check_validity();
@@ -228,7 +228,7 @@ namespace irlib {
         }
 
         /// Return a refence to end points
-        const std::vector<double> &section_edges() const {
+        const std::vector<Tx> &section_edges() const {
 #ifndef NDEBUG
             check_validity();
 #endif
@@ -261,15 +261,42 @@ namespace irlib {
         }
 
         /// Compute the value at x.
-        inline T compute_value(double x) const {
+        inline T compute_value(Tx x) const {
 #ifndef NDEBUG
             check_validity();
 #endif
             return compute_value(x, find_section(x));
         }
 
+        inline T derivative(Tx x, int order) const {
+#ifndef NDEBUG
+            check_validity();
+#endif
+            int section = find_section(x);
+            const double dx = static_cast<double>(x - section_edges_[section]);
+
+            std::vector<T> coeff_deriv(k_+1, 0.0);
+            for (int p = 0; p < k_+1; ++p) {
+                coeff_deriv[p] = coeff_[section][p];
+            }
+
+            for (int m=0; m<order; ++m) {
+                for (int p = 0; p < k_ ; ++p) {
+                    coeff_deriv[p] = (p+1)*coeff_deriv[p+1];
+                }
+                coeff_deriv[k_] = 0;
+            }
+
+            T r = 0.0, x_pow = 1.0;
+            for (int p = 0; p < k_ + 1; ++p) {
+                r += coeff_deriv[p] * x_pow;
+                x_pow *= dx;
+            }
+            return r;
+        }
+
         /// Compute the value at x. x must be in the given section.
-        inline T compute_value(double x, int section) const {
+        inline T compute_value(Tx x, int section) const {
 #ifndef NDEBUG
             check_validity();
 #endif
@@ -277,7 +304,7 @@ namespace irlib {
                 throw std::runtime_error("The given x is not in the given section.");
             }
 
-            const double dx = x - section_edges_[section];
+            const double dx = static_cast<double>(x - section_edges_[section]);
             T r = 0.0, x_pow = 1.0;
             for (int p = 0; p < k_ + 1; ++p) {
                 r += coeff_[section][p] * x_pow;
@@ -287,7 +314,7 @@ namespace irlib {
         }
 
         /// Find the section involving the given x
-        int find_section(double x) const {
+        int find_section(Tx x) const {
 #ifndef NDEBUG
             check_validity();
 #endif
@@ -297,15 +324,14 @@ namespace irlib {
                 return coeff_.size() - 1;
             }
 
-            std::vector<double>::const_iterator it =
-                    std::upper_bound(section_edges_.begin(), section_edges_.end(), x);
+            auto it = std::upper_bound(section_edges_.begin(), section_edges_.end(), x);
             --it;
             return (&(*it) - &(section_edges_[0]));
         }
 
         /// Compute overlap <this | other> with complex conjugate. The two objects must have the same sections.
         template<class T2>
-        T overlap(const piecewise_polynomial<T2> &other) const {
+        T overlap(const piecewise_polynomial<T2,Tx> &other) const {
             check_validity();
             if (section_edges_ != other.section_edges_) {
                 throw std::runtime_error(
@@ -321,7 +347,7 @@ namespace irlib {
 
             for (int s = 0; s < n_sections_; ++s) {
                 dx_power[0] = 1.0;
-                const double dx = section_edges_[s + 1] - section_edges_[s];
+                const double dx = static_cast<double>(section_edges_[s + 1] - section_edges_[s]);
                 for (int p = 1; p < dx_power.size(); ++p) {
                     dx_power[p] = dx * dx_power[p - 1];
                 }
@@ -342,7 +368,7 @@ namespace irlib {
         }
 
         /// Returns whether or not two objects are numerically the same.
-        bool operator==(const piecewise_polynomial<T> &other) const {
+        bool operator==(const piecewise_polynomial<T,Tx> &other) const {
             return (n_sections_ == other.n_sections_) &&
                    (section_edges_ == other.section_edges_) &&
                    (coeff_ == other.coeff_);
@@ -351,23 +377,23 @@ namespace irlib {
     };//class pieacewise_polynomial
 
 /// Add piecewise_polynomial objects
-    template<typename T>
-    piecewise_polynomial<T>
-    operator+(const piecewise_polynomial<T> &f1, const piecewise_polynomial<T> &f2) {
+    template<typename T, typename Tx>
+    piecewise_polynomial<T,Tx>
+    operator+(const piecewise_polynomial<T,Tx> &f1, const piecewise_polynomial<T,Tx> &f2) {
         return detail::do_op(f1, f2, detail::pp_plus<T>());
     }
 
 /// Substract piecewise_polynomial objects
-    template<typename T>
-    piecewise_polynomial<T>
-    operator-(const piecewise_polynomial<T> &f1, const piecewise_polynomial<T> &f2) {
+    template<typename T, typename Tx>
+    piecewise_polynomial<T,Tx>
+    operator-(const piecewise_polynomial<T,Tx> &f1, const piecewise_polynomial<T,Tx> &f2) {
         return detail::do_op(f1, f2, detail::pp_minus<T>());
     }
 
 /// Multiply piecewise_polynomial by a scalar
-    template<typename T>
-    const piecewise_polynomial<T> operator*(T scalar, const piecewise_polynomial<T> &pp) {
-        piecewise_polynomial<T> pp_copy(pp);
+    template<typename T, typename Tx>
+    const piecewise_polynomial<T,Tx> operator*(T scalar, const piecewise_polynomial<T,Tx> &pp) {
+        piecewise_polynomial<T,Tx> pp_copy(pp);
         std::transform(
                 pp_copy.coeff_.origin(), pp_copy.coeff_.origin() + pp_copy.coeff_.num_elements(),
                 pp_copy.coeff_.origin(), std::bind1st(std::multiplies<T>(), scalar)
@@ -377,9 +403,9 @@ namespace irlib {
     }
 
 /// Gram-Schmidt orthonormalization
-    template<typename T>
-    void orthonormalize(std::vector<piecewise_polynomial<T> > &pps) {
-        typedef piecewise_polynomial<T> pp_type;
+    template<typename T, typename Tx>
+    void orthonormalize(std::vector<piecewise_polynomial<T,Tx> > &pps) {
+        typedef piecewise_polynomial<T,Tx> pp_type;
 
         for (int l = 0; l < pps.size(); ++l) {
             pp_type pp_new(pps[l]);
@@ -395,9 +421,9 @@ namespace irlib {
 /**
  * @brief Class representing a pieacewise polynomial and utilities
  */
-    template<typename T>
-    irlib::piecewise_polynomial<T>
-    multiply(const irlib::piecewise_polynomial<T> &f1, const irlib::piecewise_polynomial<T> &f2) {
+    template<typename T, typename Tx>
+    piecewise_polynomial<T,Tx>
+    multiply(const piecewise_polynomial<T,Tx> &f1, const piecewise_polynomial<T,Tx> &f2) {
         if (f1.section_edges() != f2.section_edges()) {
             throw std::runtime_error("Two pieacewise_polynomial objects with different sections cannot be multiplied.");
         }
@@ -406,7 +432,7 @@ namespace irlib {
         const int k2 = f2.order();
         const int k = k1 + k2;
 
-        irlib::piecewise_polynomial<T> r(k, f1.section_edges());
+        piecewise_polynomial<T,Tx> r(k, f1.section_edges());
         for (int s=0; s < f1.num_sections(); ++s) {
             for (int p = 0; p <= k; p++) {
                 r.coefficient(s, p) = 0.0;
@@ -420,9 +446,9 @@ namespace irlib {
         return r;
     }
 
-    template<typename T>
+    template<typename T, typename Tx>
     T
-    integrate(const irlib::piecewise_polynomial<T> &y) {
+    integrate(const piecewise_polynomial<T,Tx> &y) {
         const int k = y.order();
 
         std::vector<T> rvec(k+1, 0.0);

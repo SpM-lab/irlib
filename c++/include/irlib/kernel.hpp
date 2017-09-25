@@ -128,32 +128,6 @@ namespace irlib {
         double Lambda_;
     };
 
-    namespace detail {
-
-        template<typename mp_type>
-        std::vector<std::pair<mp_type, mp_type> >
-        composite_gauss_legendre_nodes(
-                const std::vector<mp_type> &section_edges,
-                const std::vector<std::pair<mp_type, mp_type> > &nodes
-        ) {
-            int num_sec = section_edges.size() - 1;
-            int num_local_nodes = nodes.size();
-
-            std::vector<std::pair<mp_type, mp_type> > all_nodes(num_sec * num_local_nodes);
-            for (int s = 0; s < num_sec; ++s) {
-                auto a = section_edges[s];
-                auto b = section_edges[s + 1];
-                for (int n = 0; n < num_local_nodes; ++n) {
-                    mp_type x = a + ((b - a) / mp_type(2)) * (nodes[n].first + mp_type(1));
-                    mp_type w = ((b - a) / mp_type(2)) * nodes[n].second;
-                    all_nodes[s * num_local_nodes + n] = std::make_pair(x, w);
-                }
-            }
-            return all_nodes;
-        };
-    }
-
-
     /**
      * Compute Matrix representation of a given Kernel
      * @tparam mp_type
@@ -180,8 +154,8 @@ namespace irlib {
 
         // nodes for Gauss-Legendre integration
         std::vector<std::pair<mp_type, mp_type >> nodes = detail::gauss_legendre_nodes<mp_type>(num_local_nodes);
-        auto nodes_x = detail::composite_gauss_legendre_nodes(section_edges_x, nodes);
-        auto nodes_y = detail::composite_gauss_legendre_nodes(section_edges_y, nodes);
+        auto nodes_x = composite_gauss_legendre_nodes(section_edges_x, nodes);
+        auto nodes_y = composite_gauss_legendre_nodes(section_edges_y, nodes);
 
         std::vector<matrix_type> phi_x(num_sec_x);
         for (int s = 0; s < num_sec_x; ++s) {
@@ -236,8 +210,8 @@ namespace irlib {
 
     std::tuple<
             std::vector<double>,
-            std::vector<irlib::piecewise_polynomial<double>>,
-            std::vector<irlib::piecewise_polynomial<double>>
+            std::vector<pp_type>,
+            std::vector<pp_type>
             >
     generate_ir_basis_functions_impl(
             const kernel<mpfr::mpreal>& kernel,
@@ -303,18 +277,9 @@ namespace irlib {
 
 
         auto gen_pp = [&] (const std::vector<mpreal>& section_edges, const std::vector<vector_t>& vectors) {
-            // Construct section edges for piecewise polynomial representations of basis functions
-            std::vector<double> section_edges_pp{0.0};
-            for (int i=1; i<section_edges.size(); ++i) {
-                section_edges_pp.push_back((double) section_edges[i]);
-                section_edges_pp.push_back((double) -section_edges[i]);
-            }
-            std::sort(section_edges_pp.begin(), section_edges_pp.end());
+            std::vector<pp_type> pp;
 
-            std::vector<piecewise_polynomial<double>> pp;
-
-            int ns_pp = section_edges_pp.size()-1;
-            assert(section_edges_pp.size()-1 == 2*(section_edges.size()-1));
+            int ns_pp = section_edges.size()-1;
             for (int v=0; v<vectors.size(); ++v) {
                 mpreal norm = (vectors[v].transpose() * vectors[v])(0,0);
                 assert(mpfr::abs(norm - 1) < 1e-8);
@@ -326,19 +291,18 @@ namespace irlib {
                 for (int s=0; s<section_edges.size()-1; ++s) {
                     // loop over normalized Ledendre polynomials
                     for (int l=0; l<Nl; ++l) {
-                        mpreal coeff2(1/mpfr::sqrt(section_edges[s + 1] - section_edges[s]));
+                        mpreal coeff2(1/sqrt(section_edges[s + 1] - section_edges[s]));
                         // loop over the orders of derivatives
                         for (int d=0; d<Nl; ++d) {
                             auto tmp = static_cast<double>(
                                     inv_factorial[d] * coeff2 * vectors[v][s*Nl+l] * deriv_xm1[l][d]
                             );
-                            coeff[s + ns_pp / 2][d] += tmp;
-                            coeff[-s + ns_pp / 2 - 1][d] += parity * tmp * (l % 2 == 0 ? 1 : -1);
+                            coeff[s][d] += tmp;
                             coeff2 *= 2 / (section_edges[s + 1] - section_edges[s]);
                         }
                     }
                 }
-                pp.push_back(piecewise_polynomial<double>(section_edges_pp.size()-1, section_edges_pp, coeff));
+                pp.push_back(pp_type(section_edges.size()-1, section_edges, coeff));
             }
 
             return pp;
@@ -355,13 +319,24 @@ namespace irlib {
         }
 
         residual_x.resize(section_edges_x.size()-1);
-        for (int s=0; s < residual_x.size(); ++s) {
-            residual_x[s] = static_cast<double>(pow(Uvec.back()(s*Nl+Nl-1),2) + pow(Uvec.back()(s*Nl+Nl-2),2));
-        }
-
         residual_y.resize(section_edges_y.size()-1);
-        for (int s=0; s < residual_y.size(); ++s) {
-            residual_y[s] = static_cast<double>(pow(Vvec.back()(s*Nl+Nl-1),2) + pow(Vvec.back()(s*Nl+Nl-2),2));
+        std::fill(residual_x.begin(), residual_x.end(), 0.0);
+        std::fill(residual_y.begin(), residual_y.end(), 0.0);
+
+        for (int l=0; l<Uvec.size(); ++l) {
+            for (int s=0; s < residual_x.size(); ++s) {
+                residual_x[s] = std::max(
+                        residual_x[s],
+                        static_cast<double>(pow(Uvec[l](s*Nl+Nl-1),2) + pow(Uvec[l](s*Nl+Nl-2),2))
+                );
+            }
+
+            for (int s=0; s < residual_y.size(); ++s) {
+                residual_y[s] = std::max(
+                        residual_y[s],
+                        static_cast<double>(pow(Vvec[l](s*Nl+Nl-1),2) + pow(Vvec[l](s*Nl+Nl-2),2))
+                );
+            }
         }
 
         return std::make_tuple(sv, u_basis_pp, v_basis_pp);
@@ -369,8 +344,8 @@ namespace irlib {
 
     std::tuple<
             std::vector<double>,
-            std::vector<irlib::piecewise_polynomial<double>>,
-            std::vector<irlib::piecewise_polynomial<double>>
+            std::vector<pp_type>,
+            std::vector<pp_type>
     >
     generate_ir_basis_functions(
             const kernel<mpfr::mpreal>& kernel,
@@ -392,20 +367,21 @@ namespace irlib {
         }
 
         // Compute approximate positions of nodes of the highest basis function in the even sector
-        //std::vector<double> nodes_x, nodes_y;
-        //std::tie(nodes_x, nodes_y) = compute_approximate_nodes_even_sector(kernel, 250, 1e-12);
+        std::vector<double> nodes_x, nodes_y;
+        std::tie(nodes_x, nodes_y) = compute_approximate_nodes_even_sector(kernel, 200, std::max(1e-12, sv_cutoff));
 
-        /*
         auto gen_section_edges = [](const std::vector<double>& nodes) {
             std::vector<mpreal> section_edges;
             section_edges.push_back(0);
-            for (auto it = nodes.begin(); it != nodes.end(); ++it) {
-                section_edges.push_back(mpreal(*it));
+            //for (auto it = nodes.begin(); it != nodes.end(); ++it) {
+                //section_edges.push_back(mpreal(*it));
+            //}
+            for (int i = 0; i < nodes.size(); ++i) {
+                section_edges.push_back(mpreal(nodes[i]));
             }
             section_edges.push_back(1);
             return section_edges;
         };
-        */
 
         auto u = [](const std::vector<mpreal>& section_edges,
                                        std::vector<double>& residual, double eps) {
@@ -421,8 +397,13 @@ namespace irlib {
             return section_edges_new;
         };
 
-        std::vector<mpreal> section_edges_x = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
-        std::vector<mpreal> section_edges_y = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
+        //std::vector<mpreal> section_edges_x = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
+        //std::vector<mpreal> section_edges_y = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
+
+        std::vector<mpreal> section_edges_x = gen_section_edges(nodes_x);
+        std::vector<mpreal> section_edges_y = gen_section_edges(nodes_y);
+
+        int ite = 0;
 
         while(true) {
             std::vector<double> residual_x, residual_y;
@@ -436,11 +417,12 @@ namespace irlib {
 
             section_edges_x = u(section_edges_x, residual_x, aeps);
             section_edges_y = u(section_edges_y, residual_y, aeps);
-            //std::cout << section_edges_x.size() << " " << section_edges_y.size() << std::endl;
 
             if (section_edges_x.size() + section_edges_y.size() == ns) {
                 return r;
             }
+
+            ite += 1;
         }
 
     };

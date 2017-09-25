@@ -2,8 +2,10 @@ from __future__ import print_function
 
 import numpy
 import scipy.integrate as integrate
-import irlib.basis
+import irlib
 import matplotlib.pyplot as plt
+
+#plt.rc('text', usetex=True)
 
 beta = 100.0
 
@@ -24,21 +26,23 @@ xs = numpy.linspace(-1, 1, N)
 Gtau_exact = Gx(xs)
 
 # Number of Matsubara freq for which G(iomega_n) will be reconstructed
-niw = 100
+niw = 800
 
-ni_reconstruct = 20
+ni_reconstruct = 30
 
 ## Construct basis
 idx = 0
 markers = ['o', 's', 'x', '+']
-for Lambda in [0.0, 500.0, 5000.0]:
+for Lambda in [100.0, 1000.0]:
     max_dim = 50
-    b = irlib.basis.basis_f(Lambda, max_dim)
+
+    print("Computing basis functions for Lambda = %s... It may take some time"%(Lambda))
+    b = irlib.basis_f(Lambda, max_dim)
 
     ## Compute expansion coefficients of GF in terms of the ir basis by means of numerical integration over x
     Gl = numpy.zeros((b.dim(),), dtype=float)
     for l in range(b.dim()):
-        Gl[l] = (beta/numpy.sqrt(2.0))*integrate.quad(lambda x: Gx(x)*b.value(x,l), -1.0, 1.0, epsabs=1e-6, limit=400)[0]
+        Gl[l] = (beta/numpy.sqrt(2.0))*integrate.quad(lambda x: Gx(x)*b.ulx(l,x), -1.0, 1.0, epsabs=1e-6, limit=400)[0]
 
     plt.figure(1)
     plt.semilogy(numpy.abs(Gl), marker=markers[idx], linestyle='', label='Lambda='+str(Lambda))
@@ -47,7 +51,8 @@ for Lambda in [0.0, 500.0, 5000.0]:
     Gtau_ir = numpy.zeros((N,), dtype=float)
     for i in range(N):
         x = xs[i]
-        Gtau_ir[i] = numpy.dot(Gl[:ni_reconstruct], b.values(x)[:ni_reconstruct])*numpy.sqrt(2.0)/beta
+        ul = numpy.array([b.ulx(l,x) for l in range(ni_reconstruct)])
+        Gtau_ir[i] = numpy.dot(Gl[:ni_reconstruct], ul)*numpy.sqrt(2.0)/beta
 
     plt.figure(2)
     plt.plot((xs+1)*0.5*beta, Gtau_ir, marker=markers[idx], linestyle='', label='Lambda='+str(Lambda))
@@ -56,6 +61,7 @@ for Lambda in [0.0, 500.0, 5000.0]:
     plt.semilogy((xs+1)*0.5*beta, numpy.abs(Gtau_ir-Gtau_exact), marker=markers[idx], linestyle='-', label='Lambda='+str(Lambda))
 
     # Reconstruct G(iomega_n) for positive Matsubara freq. from the first ni_reconstruct data points
+    # Note: compute_Tnl() accepcts only non-negative Matsubara freq. in ascending order!
     Tnl = b.compute_Tnl(numpy.arange(niw))
 
     plt.figure(4)

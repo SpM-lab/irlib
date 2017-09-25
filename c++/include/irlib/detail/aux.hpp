@@ -9,9 +9,42 @@
 #include "spline.hpp"
 
 namespace irlib {
-    template<typename T>
-    irlib::piecewise_polynomial<T> construct_piecewise_polynomial_cspline(
-            const std::vector<double> &x_array, const std::vector<double> &y_array) {
+    template<typename mp_type>
+    std::vector<std::pair<mp_type, mp_type> >
+    composite_gauss_legendre_nodes(
+            const std::vector<mp_type> &section_edges,
+            const std::vector<std::pair<mp_type, mp_type> > &nodes
+    ) {
+        int num_sec = section_edges.size() - 1;
+        int num_local_nodes = nodes.size();
+
+        std::vector<std::pair<mp_type, mp_type> > all_nodes(num_sec * num_local_nodes);
+        for (int s = 0; s < num_sec; ++s) {
+            auto a = section_edges[s];
+            auto b = section_edges[s + 1];
+            for (int n = 0; n < num_local_nodes; ++n) {
+                mp_type x = a + ((b - a) / mp_type(2)) * (nodes[n].first + mp_type(1));
+                mp_type w = ((b - a) / mp_type(2)) * nodes[n].second;
+                all_nodes[s * num_local_nodes + n] = std::make_pair(x, w);
+            }
+        }
+        return all_nodes;
+    };
+
+    template<typename Tx, typename Ty, typename F>
+    Ty integrate_gauss_legendre(const std::vector<Tx>& section_edges, const F& f, int num_local_nodes) {
+        std::vector<std::pair<mpreal, mpreal >> nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
+        auto nodes_x = composite_gauss_legendre_nodes(section_edges, nodes);
+        Ty r = 0;
+        for (int n=0; n<nodes_x.size(); ++n) {
+            r += f(nodes_x[n].first) * nodes_x[n].second;
+        }
+        return r;
+    };
+
+    template<typename T, typename Tx>
+    piecewise_polynomial<T,Tx> construct_piecewise_polynomial_cspline(
+            const std::vector<Tx> &x_array, const std::vector<double> &y_array) {
         const int n_points = x_array.size();
         const int n_section = n_points - 1;
 
@@ -19,7 +52,11 @@ namespace irlib {
 
         // Cubic spline interpolation
         tk::spline spline;
-        spline.set_points(x_array, y_array);
+        std::vector<double> x_array_d(x_array.size());
+        for (int i=0; i<x_array.size(); ++i) {
+            x_array_d[i] = static_cast<double>(x_array[i]);
+        }
+        spline.set_points(x_array_d, y_array);
 
         // Construct piecewise_polynomial
         for (int s = 0; s < n_section; ++s) {
@@ -27,8 +64,8 @@ namespace irlib {
                 coeff[s][p] = spline.get_coeff(s, p);
             }
         }
-        irlib::piecewise_polynomial<T> tmp(n_section, x_array, coeff);
-        return irlib::piecewise_polynomial<T>(n_section, x_array, coeff);
+        piecewise_polynomial<T,Tx> tmp(n_section, x_array, coeff);
+        return piecewise_polynomial<T,Tx>(n_section, x_array, coeff);
     };
 
     template<typename T>
@@ -92,66 +129,20 @@ namespace irlib {
         typedef double value;
     };
 
-    template<class T>
+    /*
+    template<typename T, typename Tx>
     void compute_integral_with_exp(
             const std::vector<double> &w,
-            const std::vector<irlib::piecewise_polynomial<T>> &pp_func,
+            const std::vector<piecewise_polynomial<T,Tx> > &pp_func,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     );
-
-    /// Construct piecewise polynomials representing Matsubara basis functions: exp(-i w_n tau) for n >= 0.
-    /// For fermionic cases, w_n = (2*n+1)*pi/beta.
-    /// For bosonci cases, w_n = (2*n)*pi/beta.
-    /// Caution: when n is large, you need a very dense mesh. You are resposible for this.
-    template<class T>
-    void construct_matsubra_basis_functions_coeff(
-            int n_min, int n_max,
-            irlib::statistics::statistics_type s,
-            const std::vector<double> &section_edges,
-            int k,
-            boost::multi_array<std::complex<T>, 3> &coeffs) {
-
-        if (n_min < 0) {
-            throw std::invalid_argument("n_min cannot be negative.");
-        }
-        if (n_min > n_max) {
-            throw std::invalid_argument("n_min cannot be larger than n_max.");
-        }
-
-        const int N = section_edges.size() - 1;
-
-        std::complex<double> z;
-        coeffs.resize(boost::extents[n_max - n_min + 1][N][k + 1]);
-
-        std::vector<double> pre_factor(k + 1);
-        pre_factor[0] = 1.0;
-        for (int j = 1; j < k + 1; ++j) {
-            pre_factor[j] = pre_factor[j - 1] / j;
-        }
-
-        for (int n = n_min; n <= n_max; ++n) {
-            if (s == irlib::statistics::FERMIONIC) {
-                z = -std::complex<double>(0.0, n + 0.5) * M_PI;
-            } else if (s == irlib::statistics::BOSONIC) {
-                z = -std::complex<double>(0.0, n) * M_PI;
-            }
-            for (int section = 0; section < N; ++section) {
-                const double x = section_edges[section];
-                std::complex<T> exp0 = std::exp(z * (x + 1));
-                std::complex<T> z_power = 1.0;
-                for (int j = 0; j < k + 1; ++j) {
-                    coeffs[n - n_min][section][j] = exp0 * z_power * pre_factor[j];
-                    z_power *= z;
-                }
-            }
-        }
-    }
+    */
 
     /// Construct piecewise polynomials representing exponential functions: exp(i w_i x)
-    template<class T>
+    template<class T, typename Tx>
     void construct_exp_functions_coeff(
             const std::vector<double> &w,
-            const std::vector<double> &section_edges,
+            const std::vector<Tx> &section_edges,
             int k,
             boost::multi_array<std::complex<T>, 3> &coeffs) {
         const int N = section_edges.size() - 1;
@@ -168,7 +159,7 @@ namespace irlib {
         for (int n = 0; n < w.size(); ++n) {
             auto z = std::complex<double>(0.0, w[n]);
             for (int section = 0; section < N; ++section) {
-                const double x = section_edges[section];
+                const double x = static_cast<double>(section_edges[section]);
                 std::complex<T> exp0 = std::exp(z * (x + 1));
                 std::complex<T> z_power = 1.0;
                 for (int j = 0; j < k + 1; ++j) {
@@ -180,100 +171,58 @@ namespace irlib {
     }
 
 /**
- * Compute a transformation matrix from a give orthogonal basis set to Matsubara freq.
- * @tparam T  scalar type
- * @param n_min min index of Matsubara freq. index (>=0)
- * @param n_max max index of Matsubara freq. index (>=0)
- * @param statis Statistics (fermion or boson)
- * @param bf_src orthogonal basis functions. They must be piecewise polynomials of the same order.
- * @param Tnl  computed transformation matrix
- */
-    template<class T>
-    void compute_transformation_matrix_to_matsubara_impl(
-            const std::vector<long> &n_vec,
-            irlib::statistics::statistics_type statis,
-            const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
-            Eigen::Tensor<std::complex<double>, 2> &Tnl
-    ) {
-        typedef std::complex<double> dcomplex;
-        typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
-        typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
-        typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
+ *  Compute \int_x0^x1 dx exp(i w (x+1)) (x-x0)^k
+ *      for k=0, 1, ..., K+1. x1 = x0+dx.
+**/
+    inline void compute_Ik(double x0, double dx, double w, int K, std::vector<std::complex<double> >& Ik) {
+        auto x1 = x0 + dx;
+        auto iw = std::complex<double>(0.0, w);
+        auto exp0 = std::exp(iw*(x0+1));
+        auto exp1 = std::exp(iw*(x1+1));
+        Ik[0] = (exp1 - exp0)/iw;
 
-        //if (n_min < 0) {
-        //throw std::invalid_argument("n_min cannot be negative.");
-        //}
-        //if (n_min > n_max) {
-        //throw std::invalid_argument("n_min cannot be larger than n_max.");
-        //}
-        for (int n = 0; n < n_vec.size(); ++n) {
-            if (n_vec[n] < 0) {
-                throw std::runtime_error("n_vec cannot be negative.");
-            }
-        }
-        for (int n = 0; n < n_vec.size() - 1; ++n) {
-            if (n_vec[n] > n_vec[n + 1]) {
-                throw std::runtime_error("n_vec must be in ascending order.");
-            }
-        }
-
-        std::vector<double> w(n_vec.size());
-
-        for (int n = 0; n < n_vec.size(); ++n) {
-            if (statis == irlib::statistics::FERMIONIC) {
-                w[n] = (n_vec[n] + 0.5) * M_PI;
-            } else if (statis == irlib::statistics::BOSONIC) {
-                w[n] = n_vec[n] * M_PI;
-            }
-        }
-
-        compute_integral_with_exp(w, bf_src, Tnl);
-
-        std::vector<double> inv_norm(bf_src.size());
-        for (int l = 0; l < bf_src.size(); ++l) {
-            inv_norm[l] = 1. / std::sqrt(static_cast<double>(bf_src[l].overlap(bf_src[l])));
-        }
-        for (int n = 0; n < w.size(); ++n) {
-            for (int l = 0; l < bf_src.size(); ++l) {
-                Tnl(n, l) *= inv_norm[l] * std::sqrt(0.5);
-            }
+        auto dx_k = dx;
+        for (int k=1; k<K+1; ++k) {
+            Ik[k] = (dx_k * exp1 - (k * 1.0) * Ik[k-1])/iw;
+            dx_k *= dx;
         }
     }
 
 /**
  * Compute integral of exponential functions and given piecewise polynomials
- *           \int_{-1}^1 dx exp(i w_i (x+1)) p_j(x),
+ *           \int dx exp(i w_i (x+1)) p_j(x),
  *           where w_i are given real double objects and p_j are piecewise polynomials.
- *           The p_j(x) must be defined in the interval [-1,1].
  * @tparam T  scalar type of piecewise polynomials
  * @param w vector of w_i in ascending order
  * @param statis Statistics (fermion or boson)
- * @param p vector of piecewise polynomials
+ * @param p vector of piecewise polynomials.
  * @param results  computed results
  */
-    template<class T>
+    template<typename T, typename Tx>
     void compute_integral_with_exp(
             const std::vector<double> &w,
-            const std::vector<irlib::piecewise_polynomial<T>> &pp_func,
+            const std::vector<piecewise_polynomial<T,Tx> > &pp_func,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
         typedef std::complex<double> dcomplex;
-        typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
+        typedef piecewise_polynomial<std::complex<double>,Tx> pp_type;
         typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
         typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
         //order of polynomials used for representing exponential functions internally.
-        const int k_iw = 16;
+        const int k_iw = 16;//for debug
         const int k = pp_func[0].order();
         const int n_section = pp_func[0].num_sections();
+
+        std::vector<std::complex<double> > Ik(k+1);
 
         for (int l = 0; l < pp_func.size(); ++l) {
             if (k != pp_func[l].order()) {
                 throw std::runtime_error(
                         "Error in compute_transformation_matrix_to_matsubara: basis functions must be pieacewise polynomials of the same order");
             }
-            if (pp_func[l].section_edge(0) != -1 || pp_func[l].section_edge(n_section) != 1) {
-                throw std::runtime_error("Piecewise polynomials must be defined on [-1,1]");
+            if (pp_func[l].section_edge(0) != 0 || pp_func[l].section_edge(n_section) != 1) {
+                throw std::runtime_error("Piecewise polynomials must be defined on [0,1]");
             }
         }
 
@@ -302,9 +251,8 @@ namespace irlib {
         std::vector<double> dx_power(k + k_iw + 2);
 
         for (int s = 0; s < n_section; ++s) {
-            double x0 = pp_func[0].section_edge(s);
-            double x1 = pp_func[0].section_edge(s + 1);
-            double dx = x1 - x0;
+            auto x0 = pp_func[0].section_edge(s);
+            double dx = static_cast<double>(pp_func[0].section_edge(s + 1) - pp_func[0].section_edge(s));
             left_mid_matrix.setZero();
 
             dx_power[0] = 1.0;
@@ -341,22 +289,10 @@ namespace irlib {
 
             //Otherwise, compute the overlap exactly
             for (int n = std::max(n_max_cs + 1, 0); n <= n_max; ++n) {
-                std::complex<double> z = std::complex<double>(0.0, w[n]);
-
-                dcomplex dx_z = dx * z;
-                dcomplex dx_z2 = dx_z * dx_z;
-                dcomplex dx_z3 = dx_z2 * dx_z;
-                dcomplex inv_z = 1.0 / z;
-                dcomplex inv_z2 = inv_z * inv_z;
-                dcomplex inv_z3 = inv_z2 * inv_z;
-                dcomplex inv_z4 = inv_z3 * inv_z;
-                dcomplex exp = std::exp(dx * z);
-                dcomplex exp0 = std::exp((x0 + 1.0) * z);
-
-                left_mid_matrix(n, 0) = (-1.0 + exp) * inv_z * exp0;
-                left_mid_matrix(n, 1) = ((dx_z - 1.0) * exp + 1.0) * inv_z2 * exp0;
-                left_mid_matrix(n, 2) = ((dx_z2 - 2.0 * dx_z + 2.0) * exp - 2.0) * inv_z3 * exp0;
-                left_mid_matrix(n, 3) = ((dx_z3 - 3.0 * dx_z2 + 6.0 * dx_z - 6.0) * exp + 6.0) * inv_z4 * exp0;
+                compute_Ik(static_cast<double>(x0), dx, w[n], k, Ik);
+                for (int i=0; i<k+1; ++i) {
+                    left_mid_matrix(n, i) = Ik[i];
+                }
             }
 
             for (int l = 0; l < pp_func.size(); ++l) {
@@ -377,95 +313,74 @@ namespace irlib {
     }
 
 
-/**
- * Compute a transformation matrix from a give orthogonal basis set to Matsubara freq.
- * @tparam T  scalar type
- * @param n_min min index of Matsubara freq. index (>=0)
- * @param n_max max index of Matsubara freq. index (>=0)
- * @param statis Statistics (fermion or boson)
- * @param bf_src orthogonal basis functions. They must be piecewise polynomials of the same order.
- * @param Tnl  computed transformation matrix
- */
-    /*
-    template<class T>
-    void compute_transformation_matrix_to_matsubara(
-            int n_min, int n_max,
-            irlib::statistics::statistics_type statis,
-            const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
-            Eigen::Tensor<std::complex<double>, 2> &Tnl
-    ) {
-        const int num_n = n_max - n_min + 1;
-        const int batch_size = 500;
-        Tnl = Eigen::Tensor<std::complex<double>, 2>(num_n, bf_src.size());
-        Eigen::Tensor<std::complex<double>, 2> Tnl_batch(batch_size, bf_src.size());
-        //TODO: use MPI
-        //Split into batches to avoid using too much memory
-        for (int ib = 0; ib < num_n / batch_size + 1; ++ib) {
-            int n_min_batch = batch_size * ib;
-            int n_max_batch = std::min(batch_size * (ib + 1) - 1, n_max);
-            if (n_max_batch - n_min_batch < 0) {
-                continue;
-            }
-            std::vector<long> n_vec;
-            for (int n = n_min_batch; n <= n_max_batch; ++n) {
-                n_vec.push_back(n);
-            }
-            compute_transformation_matrix_to_matsubara_impl(n_vec, statis, bf_src, Tnl_batch);
-            for (int j = 0; j < bf_src.size(); ++j) {
-                for (int n = n_min_batch; n <= n_max_batch; ++n) {
-                    Tnl(n - n_min, j) = Tnl_batch(n - n_min_batch, j);
-                }
-            }
-        }
-    }
-     */
-
     /**
     * Compute a transformation matrix from a give orthogonal basis set to Matsubara freq.
     * @tparam T  scalar type
-    * @param n indices of Matsubara frequqneices for which matrix elements will be computed (in strictly ascending order).
+    * @param n_vec indices of Matsubara frequqneices for which matrix elements will be computed (in strictly ascending order).
     *          The Matsubara basis functions look like exp(i PI * (n[i]+1/2)) for fermions, exp(i PI * n[i]) for bosons.
-    * @param bf_src orthogonal basis functions. They must be piecewise polynomials of the same order.
+    * @param bf_src orthogonal basis functions on [-1,1]. They must be piecewise polynomials of the same order. Piecewise polynomial representations on [0,1] must be provided.
+    *               Basis functions u_l(x) are assumed to be even or odd for even l and odd l, respectively.
     * @param Tnl  computed transformation matrix
     */
-    template<class T>
+    template<typename T, typename Tx>
     void compute_transformation_matrix_to_matsubara(
-            const std::vector<long> &n,
+            const std::vector<long> &n_vec,
             irlib::statistics::statistics_type statis,
-            const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
+            const std::vector<piecewise_polynomial<T,Tx>> &bf_src,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
         typedef std::complex<double> dcomplex;
-        typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
+        typedef piecewise_polynomial<std::complex<double>,Tx> pp_type;
         typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
         typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
-        if (n.size() == 0) {
+        long n_limit = 500;
+
+        if (n_vec.size() == 0) {
             return;
         }
 
-        for (int i = 0; i < n.size() - 1; ++i) {
-            if (n[i] > n[i + 1]) {
-                throw std::runtime_error("n must be in strictly ascending order!");
+        for (int i = 0; i < n_vec.size() - 1; ++i) {
+            if (n_vec[i] > n_vec[i + 1]) {
+                throw std::runtime_error("n_vec must be in strictly ascending order!");
             }
         }
 
-        std::vector<double> w;
-        if (statis == irlib::statistics::FERMIONIC) {
-            std::transform(n.begin(), n.end(), std::back_inserter(w), [](double x) { return M_PI * (x + 0.5); });
-        } else {
-            std::transform(n.begin(), n.end(), std::back_inserter(w), [](double x) { return M_PI * x; });
+        if (n_vec[0] < 0) {
+            throw std::runtime_error("n_vec cannot be negative!");
         }
 
-        compute_integral_with_exp(w, bf_src, Tnl);
-
-        std::vector<double> inv_norm(bf_src.size());
-        for (int l = 0; l < bf_src.size(); ++l) {
-            inv_norm[l] = 1. / std::sqrt(static_cast<double>(bf_src[l].overlap(bf_src[l])));
+        std::vector<long> ovec;
+        long offset = (statis == statistics::FERMIONIC ? 1 : 0);
+        for (auto n : n_vec) {
+            if (n < n_limit) {
+                ovec.push_back(2*n+offset);
+            }
         }
-        for (int n = 0; n < w.size(); ++n) {
-            for (int l = 0; l < bf_src.size(); ++l) {
-                Tnl(n, l) *= inv_norm[l] * std::sqrt(0.5);
+
+        Eigen::Tensor<std::complex<double>, 2> Tnl_low_freq;
+        compute_Tbar_ol(ovec, bf_src, Tnl_low_freq);
+
+        Tnl = Eigen::Tensor<std::complex<double>,2>(n_vec.size(), bf_src.size());
+        Tnl.setZero();
+        for(int j=0; j<Tnl_low_freq.dimension(1); ++j) {
+            for(int i=0; i<Tnl_low_freq.dimension(0); ++i) {
+                Tnl(i,j) = Tnl_low_freq(i,j);
+            }
+        }
+
+
+        int sign_s = (statis == statistics::FERMIONIC ? 1 : -1);
+        for (int l=0; l<bf_src.size(); ++l) {
+            for (int m=0; m<bf_src[l].order(); ++m) {
+                int sign_m1 = (l+m)%2==0 ? 1 : -1;
+                if (sign_s == sign_m1) {
+                    double am = std::sqrt(2.0) * std::pow(2, m) * (sign_s + sign_m1) * bf_src[l].derivative(1, m);
+                    for (int i=ovec.size(); i<n_vec.size(); ++i) {
+                        double wn = (2*n_vec[i]+offset) * M_PI;
+                        Tnl(i, l) += am/std::pow(std::complex<double>(0.0, -wn), m+1);
+                    }
+                }
             }
         }
     }
@@ -475,17 +390,18 @@ namespace irlib {
     * @tparam T  scalar type
     * @param n indices of Matsubara frequqneices for which matrix elements will be computed (in strictly ascending order).
     *          The Matsubara basis functions look like exp(i PI * (n[i]/2) * (x+1)).
-    * @param bf_src orthogonal basis functions. They must be piecewise polynomials of the same order.
+    * @param bf_src orthogonal basis functions on [-1,1]. They must be piecewise polynomials of the same order. Piecewise polynomial representations on [0,1] must be provided.
+    *               Basis functions u_l(x) are assumed to be even or odd for even l and odd l, respectively.
     * @param Tnl  computed transformation matrix
     */
-    template<class T>
+    template<typename T, typename Tx>
     void compute_Tbar_ol(
             const std::vector<long> &o_vec,
-            const std::vector<irlib::piecewise_polynomial<T>> &bf_src,
+            const std::vector<irlib::piecewise_polynomial<T,Tx>> &bf_src,
             Eigen::Tensor<std::complex<double>, 2> &Tbar_ol
     ) {
         typedef std::complex<double> dcomplex;
-        typedef irlib::piecewise_polynomial<std::complex<double> > pp_type;
+        typedef piecewise_polynomial<std::complex<double>,Tx> pp_type;
         typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
         typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
@@ -504,9 +420,19 @@ namespace irlib {
 
         compute_integral_with_exp(w, bf_src, Tbar_ol);
 
+        for (int l=0; l<bf_src.size(); ++l) {
+            for (int i=0; i<o_vec.size(); ++i) {
+                if ( (l+o_vec[i])%2 == 0) {
+                    Tbar_ol(i,l) = 2 * Tbar_ol(i,l).real();
+                } else {
+                    Tbar_ol(i,l) = std::complex<double>(0.0, 2 * Tbar_ol(i,l).imag());
+                }
+            }
+        }
+
         std::vector<double> inv_norm(bf_src.size());
         for (int l = 0; l < bf_src.size(); ++l) {
-            inv_norm[l] = 1. / std::sqrt(static_cast<double>(bf_src[l].overlap(bf_src[l])));
+            inv_norm[l] = 1. / std::sqrt(2*static_cast<double>(bf_src[l].overlap(bf_src[l])));
         }
         for (int n = 0; n < w.size(); ++n) {
             for (int l = 0; l < bf_src.size(); ++l) {
@@ -517,10 +443,10 @@ namespace irlib {
 
 
     /// Compute overlap <left | right> with complex conjugate
-    template<class T1, class T2>
+    template<typename T1, typename T2, typename Tx>
     void compute_overlap(
-            const std::vector<irlib::piecewise_polynomial<T1> > &left_vectors,
-            const std::vector<irlib::piecewise_polynomial<T2> > &right_vectors,
+            const std::vector<piecewise_polynomial<T1,Tx> > &left_vectors,
+            const std::vector<piecewise_polynomial<T2,Tx> > &right_vectors,
             boost::multi_array<typename result_of_overlap<T1, T2>::value, 2> &results) {
         typedef typename result_of_overlap<T1, T2>::value Tr;
 
@@ -603,123 +529,6 @@ namespace irlib {
         }
     }
 
-
-    /// Compute a transformation matrix from a src orthogonal basis set to a dst orthogonal basis set.
-    /// The basis vectors are NOT necessarily normalized to 1.
-    template<class T1, class T2>
-    void compute_transformation_matrix(
-            const std::vector<irlib::piecewise_polynomial<T1> > &dst_vectors,
-            const std::vector<irlib::piecewise_polynomial<T2> > &src_vectors,
-            boost::multi_array<typename result_of_overlap<T1, T2>::value, 2> &results) {
-        compute_overlap(dst_vectors, src_vectors, results);
-
-        std::vector<double> coeff1(dst_vectors.size());
-        for (int l = 0; l < dst_vectors.size(); ++l) {
-            coeff1[l] = 1.0 / std::sqrt(
-                    static_cast<double>(
-                            dst_vectors[l].overlap(dst_vectors[l])
-                    )
-            );
-        }
-
-        std::vector<double> coeff2(src_vectors.size());
-        for (int l = 0; l < src_vectors.size(); ++l) {
-            coeff2[l] = 1.0 / std::sqrt(
-                    static_cast<double>(
-                            src_vectors[l].overlap(src_vectors[l])
-                    )
-            );
-        }
-
-        for (int l1 = 0; l1 < dst_vectors.size(); ++l1) {
-            for (int l2 = 0; l2 < src_vectors.size(); ++l2) {
-                results[l1][l2] *= coeff1[l1] * coeff2[l2];
-            }
-        }
-    };
-
-    /**
-     * Construct Piecewise polynomials approximately representing Legenre polynomials normalized to 1 on [-1,1]
-     * @param Nl number of Legendre polynomials
-     * @return Piecewise polynomials
-     */
-    inline std::vector<irlib::piecewise_polynomial<double>>
-    construct_cubic_spline_normalized_legendre_polynomials(int Nl) {
-        int Nl_max = 100;
-        int M = 40;
-        double eps = 1e-10;
-
-        std::vector<double> nodes = compute_legendre_nodes(Nl_max);
-        assert(Nl_max % 2 == 0);
-        std::vector<double> positve_nodes;
-        for (auto n: nodes) {
-            if (n > 0.0) {
-                positve_nodes.push_back(n);
-            }
-        }
-        positve_nodes.push_back(0);
-        positve_nodes.push_back(1);
-        std::sort(positve_nodes.begin(), positve_nodes.end());
-
-        std::vector<double> x_points;
-        for (int i = 0; i < positve_nodes.size() - 1; ++i) {
-            double dx = (positve_nodes[i + 1] - positve_nodes[i]) / M;
-            for (int j = 0; j < M; ++j) {
-                double x = positve_nodes[i] + dx * j;
-                x_points.push_back(x);
-                if (std::abs(x) > eps) {
-                    x_points.push_back(-x);
-                }
-            }
-        }
-        x_points.push_back(1);
-        x_points.push_back(-1);
-        std::sort(x_points.begin(), x_points.end());
-
-        std::vector<irlib::piecewise_polynomial<double>> results;
-        std::vector<double> y_vals(x_points.size());
-        for (int l = 0; l < Nl; ++l) {
-            for (int j = 0; j < x_points.size(); ++j) {
-                y_vals[j] = boost::math::legendre_p(l, x_points[j]) * std::sqrt(l + 0.5);
-            }
-            results.push_back(construct_piecewise_polynomial_cspline<double>(x_points, y_vals));
-        }
-
-        return results;
-    }
-
-    /*
-    template<class Matrix, class Vector>
-    void svd_square_matrix(Matrix &K, int n, Vector &S, Matrix &Vt, Matrix &U) {
-        char jobu = 'S';
-        char jobvt = 'S';
-        int lda = n;
-        int ldu = n;
-        int ldvt = n;
-
-        double *vt = Vt.data();
-        double *u = U.data();
-        double *s = S.data();
-
-        double dummywork;
-        int lwork = -1;
-        int info = 0;
-
-        double *A = K.data();
-        std::vector<int> iwork(8 * n);
-
-        //get optimal workspace
-        dgesdd_(&jobu, &n, &n, A, &lda, s, u, &ldu, vt, &ldvt, &dummywork, &lwork, &iwork[0], &info);
-
-        lwork = int(dummywork) + 32;
-        Vector work(lwork);
-
-        dgesdd_(&jobu, &n, &n, A, &lda, s, u, &ldu, vt, &ldvt, &work[0], &lwork, &iwork[0], &info);
-        if (info != 0) {
-            throw std::runtime_error("SVD failed to converge!");
-        }
-    }
-     */
 
     /**
      * Find approximate positions of nodes for the even singular vectors with the lowest singular value larger than a cutoff

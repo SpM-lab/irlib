@@ -5,6 +5,10 @@
 #include <Eigen/MPRealSupport>
 #include <Eigen/CXX11/Tensor>
 
+#include "piecewise_polynomial.hpp"
+#include "detail/gauss_legendre.hpp"
+#include "detail/legendre_polynomials.hpp"
+
 namespace irlib {
     namespace statistics {
         enum statistics_type {
@@ -22,14 +26,18 @@ namespace irlib {
         return b;
     }
 
+    using mpfr::mpreal;
     using mpfr::abs;
     using mpfr::sqrt;
     using mpfr::pow;
+    using mpfr::cosh;
+    using mpfr::sinh;
+
+    using pp_type = piecewise_polynomial<double,mpreal>;
+    using IR_MPREAL = mpfr::mpreal;
 }
 
 
-#include "detail/gauss_legendre.hpp"
-#include "detail/legendre_polynomials.hpp"
 
 using MatrixXmp = Eigen::Matrix<mpfr::mpreal,Eigen::Dynamic,Eigen::Dynamic>;
 using MatrixXc = Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>;

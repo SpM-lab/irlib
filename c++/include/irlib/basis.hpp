@@ -41,7 +41,7 @@ namespace irlib {
         statistics::statistics_type statistics_;
         //singular values
         std::vector<double> sv_;
-        std::vector< irlib::piecewise_polynomial<double> > u_basis_, v_basis_;
+        std::vector< irlib::piecewise_polynomial<double,mpreal> > u_basis_, v_basis_;
 
     public:
         /**
@@ -49,17 +49,38 @@ namespace irlib {
          * @param x    x = 2 * tau/beta - 1  (-1 <= x <= 1)
          * @param val  results
          */
-//#ifndef SWIG
-        //void values(double x, std::vector<double> &val) const throw(std::runtime_error);
-//#endif
-
         double sl(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return sv_[l];
         }
 
+        /**
+         * @param l  order of basis function
+         * @param x  x on [-1,1]
+         * @return   The value of u_l(x)
+         */
         double ulx(int l, double x) const throw(std::runtime_error) {
+            return ulx(l, mpfr::mpreal(x));
+        }
+
+        /**
+         * @param l  order of basis function
+         * @param y  y on [-1,1]
+         * @return   The value of v_l(y)
+         */
+        double vly(int l, double y) const throw(std::runtime_error) {
+            return vly(l, mpfr::mpreal(y));
+        }
+
+#ifndef SWIG //DO NOT EXPOSE TO PYTHON
+        /**
+         * This function should not be called outside this library
+         * @param l  order of basis function
+         * @param x  x on [-1,1]
+         * @return   The value of u_l(x)
+         */
+        double ulx(int l, const mpfr::mpreal& x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -70,10 +91,21 @@ namespace irlib {
             if (x < -1 || x > 1) {
                 throw std::runtime_error("Invalid value of x!");
             }
-            return u_basis_[l].compute_value(x);
+
+            if (x >= 0) {
+                return u_basis_[l].compute_value(x);
+            } else {
+                return u_basis_[l].compute_value(-x) * (l%2==0 ? 1 : -1);
+            }
         }
 
-        double vly(int l, double y) const throw(std::runtime_error) {
+        /**
+         * This function should not be called outside this library
+         * @param l  order of basis function
+         * @param y  y on [-1,1]
+         * @return   The value of v_l(y)
+         */
+        double vly(int l, const mpfr::mpreal& y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -84,36 +116,30 @@ namespace irlib {
             if (y < -1 || y > 1) {
                 throw std::runtime_error("Invalid value of y!");
             }
-            return v_basis_[l].compute_value(y);
-        }
-
-        /*
-        std::vector<double> values(double x) const throw(std::runtime_error) {
-            if (x < -1 || x > 1) {
-                throw std::runtime_error("Invalid value of x!");
+            if (y >= 0) {
+                return v_basis_[l].compute_value(y);
+            } else {
+                return v_basis_[l].compute_value(-y) * (l%2==0 ? 1 : -1);
             }
-            std::vector<double> val;
-            values(x, val);
-            return val;
         }
-        */
 
         /**
          * Return a reference to the l-th basis function
          * @param l l-th basis function
          * @return  reference to the l-th basis function
          */
-        const irlib::piecewise_polynomial<double> &ul(int l) const throw(std::runtime_error) {
+        const irlib::piecewise_polynomial<double,mpfr::mpreal> &ul(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return u_basis_[l];
         }
 
-        const irlib::piecewise_polynomial<double> &vl(int l) const throw(std::runtime_error) {
+        const irlib::piecewise_polynomial<double,mpfr::mpreal> &vl(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return v_basis_[l];
         }
+#endif
 
         /**
          * Return a reference to all basis functions
@@ -131,26 +157,30 @@ namespace irlib {
             return statistics_;
         }
 
+#ifndef SWIG //DO NOT EXPOSE TO PYTHON
         /**
          * Compute transformation matrix to Matsubara freq.
          * The computation may take some time. You may store the result somewhere and do not call this routine frequenctly.
-         * @param n_min min Matsubara freq. index
-         * @param n_max max Matsubara freq. index
-         * @param Tnl max
+         * @param n_vec  This vector must contain indices of non-negative Matsubara freqencies (i.e., n>=0) in ascending order.
+         * @param Tnl    Results
          */
-#ifndef SWIG
-
         void compute_Tnl(
                 const std::vector<long> &n_vec,
                 Eigen::Tensor<std::complex<double>, 2> &Tnl
         ) const {
-            irlib::compute_transformation_matrix_to_matsubara<double>(n_vec,
+            compute_transformation_matrix_to_matsubara<double>(n_vec,
                                                                                    statistics_,
                                                                                    u_basis_,
                                                                                    Tnl);
         }
 #endif
 
+        /**
+         * Compute transformation matrix to Matsubara freq.
+         * The computation may take some time. You may store the result somewhere and do not call this routine frequenctly.
+         * @param n_vec  This vector must contain indices of non-negative Matsubara freqencies (i.e., n>=0) in ascending order.
+         * @return Results
+         */
         Eigen::Tensor<std::complex<double>, 2>
         compute_Tnl(const std::vector<long> &n_vec) const {
             Eigen::Tensor<std::complex<double>, 2> Tnl;
@@ -158,6 +188,12 @@ namespace irlib {
             return Tnl;
         }
 
+        /**
+         * Compute transformation matrix (Lewin's shifted representation)
+         * The computation may take some time. You may store the result somewhere and do not call this routine frequenctly.
+         * @param o_vec  This vector must contain o >= in ascending order.
+         * @return Results
+         */
         Eigen::Tensor<std::complex<double>, 2>
         compute_Tbar_ol(const std::vector<long> &o_vec) const {
             int no = o_vec.size();
@@ -171,10 +207,6 @@ namespace irlib {
 
 
     };
-
-//#ifdef SWIG
-    //%template(real_ir_basis_set) ir_basis_set<>;
-//#endif
 
     /**
      * Fermionic IR basis

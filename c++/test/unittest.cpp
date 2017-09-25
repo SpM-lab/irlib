@@ -2,12 +2,14 @@
 
 #include <fstream>
 
+using namespace irlib;
+
 TEST(PiecewisePolynomial, Orthogonalization) {
     typedef double Scalar;
     const int n_section = 10, k = 8, n_basis = 3;
-    typedef irlib::piecewise_polynomial<Scalar> pp_type;
+    typedef irlib::piecewise_polynomial<Scalar,mpreal> pp_type;
 
-    std::vector<double> section_edges(n_section+1);
+    std::vector<mpreal> section_edges(n_section+1);
     boost::multi_array<Scalar,3> coeff(boost::extents[n_basis][n_section][k+1]);
 
     for (int s = 0; s < n_section + 1; ++s) {
@@ -33,7 +35,7 @@ TEST(PiecewisePolynomial, Orthogonalization) {
                     rtmp /= l;
                     rtmp *= n + 1 - l;
                 }
-                coeff[s][l] = rtmp * std::pow(section_edges[s], n-l);
+                coeff[s][l] = static_cast<double>(rtmp * pow(section_edges[s], n-l));
             }
         }
 
@@ -104,15 +106,15 @@ TYPED_TEST(HighTTest, BasisTypes) {
       double rtmp;
 
       //l = 0
-      rtmp = basis.ul(0).compute_value(x);
+      rtmp = basis.ulx(0,x);
       ASSERT_TRUE(std::abs(rtmp-std::sqrt(0+0.5)) < 0.02);
 
       //l = 1
-      rtmp = basis.ul(1).compute_value(x);
+      rtmp = basis.ulx(1,x);
       ASSERT_TRUE(std::abs(rtmp-std::sqrt(1+0.5)*x) < 0.02);
 
       //l = 2
-      rtmp = basis.ul(2).compute_value(x);
+      rtmp = basis.ulx(2,x);
       ASSERT_TRUE(std::abs(rtmp-std::sqrt(2+0.5)*(1.5*x*x-0.5)) < 0.02);
     }
 
@@ -121,7 +123,7 @@ TYPED_TEST(HighTTest, BasisTypes) {
       double sign = -1.0;
       double x = 1.0;
       for (int l = 0; l < basis.dim(); ++l) {
-        ASSERT_NEAR(basis.ul(l).compute_value(x) + sign * basis.ul(l).compute_value(-x), 0.0, 1e-8);
+        ASSERT_NEAR(basis.ulx(l,x) + sign * basis.ulx(l,-x), 0.0, 1e-8);
         sign *= -1;
       }
     }
@@ -157,35 +159,40 @@ TEST(IrBasis, FermionInsulatingGtau) {
   try {
     const double Lambda = 300.0, beta = 100.0;
     const int max_dim = 100;
-    irlib::basis_f basis(Lambda, max_dim, 1e-10);
+    irlib::basis_f basis(Lambda, max_dim, 1e-14);
     ASSERT_TRUE(basis.dim()>0);
 
-    typedef irlib::piecewise_polynomial<double> pp_type;
+    typedef irlib::piecewise_polynomial<double,mpreal> pp_type;
+
+      std::cout << "dim " << basis.dim() << std::endl;
+      std::cout << "section " << basis.ul(0).num_sections() << std::endl;
 
     const int nptr = basis.ul(0).num_sections() + 1;
-    std::vector<double> x(nptr), y(nptr);
+    std::vector<mpreal> x(nptr);
     for (int i = 0; i < nptr; ++i) {
       x[i] = basis.ul(0).section_edge(i);
-      y[i] = std::exp(-0.5*beta)*std::cosh(-0.5*beta*x[i]);
     }
-    pp_type gtau(irlib::construct_piecewise_polynomial_cspline<double>(x, y));
+
+    auto gtau = [&](const mpreal& x) {return std::exp(-0.5*beta)*cosh(-0.5*beta*x);};
+    auto section_edges = irlib::linspace<mpfr::mpreal>(-1, 1, 500);
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
-      coeff[l] = gtau.overlap(basis.ul(l)) * beta / std::sqrt(2.0);
+      auto f = [&](const mpreal& x) {return mpreal(gtau(x) * basis.ulx(l,x));};
+      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<mpreal,mpreal>(section_edges, f, 12) * beta / std::sqrt(2.0));
     }
 
     std::vector<double> y_r(nptr, 0.0);
     for (int l = 0; l < basis.dim(); ++l) {
       for (int i = 0; i < nptr; ++i) {
-        y_r[i] += coeff[l] * (std::sqrt(2.0)/beta) * basis.ul(l).compute_value(x[i]);
+        y_r[i] += coeff[l] * (std::sqrt(2.0)/beta) * basis.ulx(l,x[i]);
       }
     }
 
     double max_diff = 0.0;
     for (int i = 0; i < nptr; ++i) {
-      max_diff = std::max(std::abs(y[i]-y_r[i]), max_diff);
-      ASSERT_TRUE(std::abs(y[i]-y_r[i]) < 1e-6);
+      max_diff = static_cast<double>(max(abs(gtau(x[i])-y_r[i]), max_diff));
+      ASSERT_TRUE(abs(gtau(x[i])-y_r[i]) < 1e-8);
     }
 
     //to matsubara freq.
@@ -196,88 +203,17 @@ TEST(IrBasis, FermionInsulatingGtau) {
         n_vec.push_back(n);
     }
     auto Tnl_tensor = basis.compute_Tnl(n_vec);
-    MatrixXc Tnl_mat(n_iw, basis.dim()), coeff_vec(basis.dim(),1);
-    coeff_vec.setZero();
-    for (int l = 0; l < basis.dim(); ++l) {
-      coeff_vec(l,0) = coeff[l];
-      //for (int n = 0; n < n_iw; ++n) {
-        //Tnl_mat(n,l) = Tnl[n][l];
-      //}
-    }
-    Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic> coeff_iw =
-            Eigen::Map<MatrixXc>(&Tnl_tensor(0,0), n_vec.size(), basis.dim()) * coeff_vec;
-
-    const std::complex<double> zi(0.0, 1.0);
-    for (int n = 0; n < n_iw; ++n) {
-      double wn = (2.*n+1)*M_PI/beta;
-      std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
-      ASSERT_NEAR(std::abs(z-coeff_iw(n)), 0.0, 1e-8);
-    }
-
-
-  } catch (const std::exception& e) {
-    FAIL() << e.what();
-  }
-}
-
-TEST(IrBasis, Diagonal) {
-  try {
-    const double Lambda = 300.0, beta = 100.0;
-    const int max_dim = 100;
-    irlib::basis_f basis(Lambda, max_dim, 1e-10);
-    ASSERT_TRUE(basis.dim()>0);
-
-    typedef irlib::piecewise_polynomial<double> pp_type;
-
-    const int nptr = basis.ul(0).num_sections() + 1;
-    std::vector<double> x(nptr), y(nptr);
-    for (int i = 0; i < nptr; ++i) {
-      x[i] = basis.ul(0).section_edge(i);
-      y[i] = std::exp(-0.5*beta)*std::cosh(-0.5*beta*x[i]);
-    }
-    pp_type gtau(irlib::construct_piecewise_polynomial_cspline<double>(x, y));
-
-    std::vector<double> coeff(basis.dim());
-    for (int l = 0; l < basis.dim(); ++l) {
-      coeff[l] = gtau.overlap(basis.ul(l)) * beta / std::sqrt(2.0);
-    }
-
-    std::vector<double> y_r(nptr, 0.0);
-    for (int l = 0; l < basis.dim(); ++l) {
-      for (int i = 0; i < nptr; ++i) {
-        y_r[i] += coeff[l] * (std::sqrt(2.0)/beta) * basis.ul(l).compute_value(x[i]);
-      }
-    }
-
-    double max_diff = 0.0;
-    for (int i = 0; i < nptr; ++i) {
-      max_diff = std::max(std::abs(y[i]-y_r[i]), max_diff);
-      ASSERT_TRUE(std::abs(y[i]-y_r[i]) < 1e-6);
-    }
-
-    //to matsubara freq.
-    const int n_iw = 1000;
-    //boost::multi_array<std::complex<double>,2> Tnl(boost::extents[n_iw][basis.dim()]);
-    std::vector<long> n_vec;
-    for (int n=0; n<n_iw; ++n) {
-        n_vec.push_back(n);
-    }
-    auto Tnl_mat = basis.compute_Tnl(n_vec);
     MatrixXc coeff_vec(basis.dim(),1);
-    coeff_vec.setZero();
     for (int l = 0; l < basis.dim(); ++l) {
       coeff_vec(l,0) = coeff[l];
-      //for (int n = 0; n < n_iw; ++n) {
-        //Tnl_mat(n,l) = Tnl[n][l];
-      //}
     }
-    MatrixXc coeff_iw = Eigen::Map<MatrixXc>(&Tnl_mat(0,0), n_iw, basis.dim()) * coeff_vec;
+    MatrixXc coeff_iw = Eigen::Map<MatrixXc>(&Tnl_tensor(0,0), n_vec.size(), basis.dim()) * coeff_vec;
 
     const std::complex<double> zi(0.0, 1.0);
     for (int n = 0; n < n_iw; ++n) {
       double wn = (2.*n+1)*M_PI/beta;
       std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
-      ASSERT_NEAR(std::abs(z-coeff_iw(n)), 0.0, 1e-8);
+      ASSERT_NEAR(std::abs(z-coeff_iw(n)), 0.0, 1e-9);
     }
 
 
@@ -285,129 +221,4 @@ TEST(IrBasis, Diagonal) {
     FAIL() << e.what();
   }
 }
-TEST(IrBasis, Test) {
-  try {
-    const double Lambda = 300.0, beta = 100.0;
-    const int max_dim = 100;
-    typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
 
-    irlib::basis_f basis(Lambda, max_dim, 1e-10);
-    ASSERT_TRUE(basis.dim() > 0);
-
-    typedef irlib::piecewise_polynomial<double> pp_type;
-
-    const int nptr = basis.ul(0).num_sections() + 1;
-    std::vector<double> x(nptr), y(nptr);
-    for (int i = 0; i < nptr; ++i) {
-      x[i] = basis.ul(0).section_edge(i);
-      y[i] = std::exp(-0.5 * beta) * std::cosh(-0.5 * beta * x[i]);
-    }
-    pp_type gtau(irlib::construct_piecewise_polynomial_cspline<double>(x, y));
-
-    std::vector<double> coeff(basis.dim());
-    for (int l = 0; l < basis.dim(); ++l) {
-      coeff[l] = gtau.overlap(basis.ul(l)) * beta / std::sqrt(2.0);
-    }
-
-    std::vector<double> y_r(nptr, 0.0);
-    for (int l = 0; l < basis.dim(); ++l) {
-      for (int i = 0; i < nptr; ++i) {
-        y_r[i] += coeff[l] * (std::sqrt(2.0) / beta) * basis.ul(l).compute_value(x[i]);
-      }
-    }
-
-    double max_diff = 0.0;
-    for (int i = 0; i < nptr; ++i) {
-      max_diff = std::max(std::abs(y[i] - y_r[i]), max_diff);
-      ASSERT_TRUE(std::abs(y[i] - y_r[i]) < 1e-6);
-    }
-
-    //to matsubara freq.
-    const int n_iw = 10000;
-    //boost::multi_array<std::complex<double>, 2> Tnl(boost::extents[n_iw][basis.dim()]);
-    std::vector<long> n_vec;
-    for (int n=0; n<n_iw; ++n) {
-        n_vec.push_back(n);
-    }
-    auto Tnl_mat = basis.compute_Tnl(n_vec);
-    //Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> Tnl_mat(n_iw, basis.dim()),
-    MatrixXc coeff_vec(basis.dim(), 1);
-    coeff_vec.setZero();
-    for (int l = 0; l < basis.dim(); ++l) {
-      coeff_vec(l, 0) = coeff[l];
-      //for (int n = 0; n < n_iw; ++n) {
-        //Tnl_mat(n, l) = Tnl[n][l];
-      //}
-    }
-
-    matrix_t coeff_iw = Eigen::Map<MatrixXc>(&Tnl_mat(0,0), n_iw, basis.dim()) * coeff_vec;
-
-    matrix_t Giw(n_iw, n_iw);
-    Giw.setZero();
-    for (int n = 0; n < n_iw; ++n) {
-      Giw(n, n) = coeff_iw(n);
-    }
-
-    const int nl = basis.dim();
-
-    matrix_t right_mat(n_iw, nl*nl);
-    for (int lp = 0; lp < nl; ++lp) {
-      for (int lpp = 0; lpp < nl; ++lpp) {
-        for (int n = 0; n < n_iw; ++n) {
-          right_mat(n, lpp + lp*nl) = Tnl_mat(n,lp) * Tnl_mat(n,lpp);
-        }
-      }
-    }
-
-    matrix_t left_mat(nl, n_iw);
-    for (int l=0; l<nl; ++l) {
-      for (int n = 0; n < n_iw; ++n) {
-        left_mat(l, n) = std::conj(Tnl_mat(n,l));
-      }
-    }
-
-    matrix_t S_mat = left_mat * right_mat;
-
-    std::ofstream ofs("S.txt");
-    for (int l=0; l<nl; ++l) {
-      for (int lp = 0; lp < nl; ++lp) {
-        for (int lpp = 0; lpp < nl; ++lpp) {
-          //std::cout << S_mat(l, lp + lpp*nl).real();
-          ofs << std::setprecision(std::numeric_limits<float >::max_digits10) << S_mat(l, lp + lpp*nl).real() << std::endl;
-        }
-      }
-    }
-
-    //boost::multi_array<std::complex<double>, 3> S(boost::extents[nl][nl][nl]);
-//
-    //for (int l=0; l<nl; ++l) {
-      //for (int lp=0; lp<nl; ++lp) {
-        //for (int lpp=0; lpp<nl; ++lpp) {
-          //S[l][lp][lpp] = 0.0;
-          //for (int n = 0; n < n_iw; ++n) {
-            //S[l][lp][lpp] += std::conj(Tnl[n][l]) * Tnl[n][lp] * Tnl[n][lpp];
-          //}
-          //std::cout << l << " " << lp << " " << lpp << " " << S[l][lp][lpp].real() << " " << S[l][lp][lpp].imag() << std::endl;
-        //}
-      //}
-    //}
-    //matrix_t Gl = Tnl_mat.transpose().conjugate() * Giw * Tnl_mat;
-
-    //const std::complex<double> zi(0.0, 1.0);
-    //for (int n = 0; n < n_iw; ++n) {
-      //double wn = (2.*n+1)*M_PI/beta;
-      //std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
-      //ASSERT_NEAR(std::abs(z-coeff_iw(n)), 0.0, 1e-8);
-    //}
-
-    //for (int l = 0; l < 40; ++l) {
-      //for (int l2 = 0; l2 < 40; ++l2) {
-        //std::cout << l << " " << l2 << " " << std::abs(Giw(l, l2)) << " " << std::abs(Gl(l, l2)) << " " << std::abs(coeff_vec(l)) << std::endl;
-      //}
-      //std::cout << std::endl;
-    //}
-
-  } catch (const std::exception& e) {
-    FAIL() << e.what();
-  }
-}
