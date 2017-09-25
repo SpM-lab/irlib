@@ -17,9 +17,6 @@ Header-file libraries for linear algebra. Eigen Tensor library in unsupported mo
 
 ### GMP (>= 4.21)
 
-### MPFR++
-MPFR++ is bundled.
-
 ### Python 2.7 or 3.5
 For generating Python bindings
 
