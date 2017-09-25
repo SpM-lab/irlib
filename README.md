@@ -29,8 +29,7 @@ $ cmake \
     -DPYTHON_INCLUDE_DIR=/opt/local/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7 \
     -DPYTHON_LIBRARY=/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib \
     -DCMAKE_CXX_FLAGS="-std=c++11" \
-    -DCMAKE_INSTALL_PREFIX=/opt/ir_basis \
-    -DEIGEN3_INCLUDE_DIR=/opt/Eigen3/include/eigen3 \
+    -DCMAKE_INSTALL_PREFIX=/opt/irlib \
     -DTesting=ON \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_VERBOSE_MAKEFILE=ON ~/git/irlib \
