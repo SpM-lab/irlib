@@ -11,7 +11,9 @@ C++ header-file only library for generating kernel "intermediate-representation"
 ### C++11 compiler
 
 ### Eigen3 (>= 3.3)
-Header-file libraries for linear algebra. Eigen Tensor library in unsupported modules is required.
+Header-file libraries for linear algebra. The unsupported tensor module is required.
+To build irlib with clang++ compiler, please use an unstable (development) version of Eigen3.
+There is a bug in the latest release (Eigen 3.3.4) as of now.
 
 ### MPFR (>= 2.31)
 
