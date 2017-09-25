@@ -10,9 +10,6 @@ C++ header-file only library for generating kernel "intermediate-representation"
 ## Requirements
 ### C++11 compiler
 
-### Boost (>= 1.55.0)
-Only header-file libraries are needed.
-
 ### Eigen3 (>= 3.3)
 Header-file libraries for linear algebra. Eigen Tensor library in unsupported modules is required.
 
@@ -21,7 +18,7 @@ Header-file libraries for linear algebra. Eigen Tensor library in unsupported mo
 ### GMP (>= 4.21)
 
 ### MPFR++
-This library is bundled.
+MPFR++ is bundled.
 
 ### Python 2.7 or 3.5
 For generating Python bindings

@@ -129,6 +129,7 @@ TYPED_TEST(HighTTest, BasisTypes) {
     }
 
     //check transformation matrix to Matsubara frequencies
+     /*
     if (basis.get_statistics() == irlib::statistics::FERMIONIC) {
 
       const int N_iw = 3;
@@ -150,6 +151,7 @@ TYPED_TEST(HighTTest, BasisTypes) {
         }
       }
     }
+     */
   } catch (const std::exception& e) {
     FAIL() << e.what();
   }

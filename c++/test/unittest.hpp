@@ -2,6 +2,7 @@
 
 #include <irlib/basis.hpp>
 
+/*
 #include <boost/math/special_functions/bessel.hpp>
 
 void compute_Tnl_legendre(int n_matsubara, int n_legendre, Eigen::Matrix<std::complex<double>,Eigen::Dynamic, Eigen::Dynamic> &Tnl) {
@@ -17,3 +18,4 @@ void compute_Tnl_legendre(int n_matsubara, int n_legendre, Eigen::Matrix<std::co
   }
 }
 
+*/
