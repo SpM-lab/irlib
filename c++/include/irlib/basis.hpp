@@ -21,7 +21,8 @@ namespace irlib {
 /**
  * Class for kernel Ir basis
  */
-    class ir_basis_set {
+ template<typename MPREAL>
+    class basis_set {
     public:
         /**
          * Constructor
@@ -30,7 +31,7 @@ namespace irlib {
          * @param cutoff  we drop basis functions corresponding to small singular values  |s_l/s_0~ < cutoff.
          * @param Nl   Number of Legendre polynomials used to expand basis functions in each sector
          */
-        ir_basis_set(const irlib::kernel<mpfr::mpreal> &knl, int max_dim, double cutoff, int Nl) throw(std::runtime_error) {
+        basis_set(const irlib::kernel<MPREAL> &knl, int max_dim, double cutoff, int Nl) throw(std::runtime_error) {
             statistics_ = knl.get_statistics();
             std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions(knl, max_dim, cutoff, Nl);
             assert(u_basis_.size()>0);
@@ -41,7 +42,7 @@ namespace irlib {
         statistics::statistics_type statistics_;
         //singular values
         std::vector<double> sv_;
-        std::vector< irlib::piecewise_polynomial<double,mpreal> > u_basis_, v_basis_;
+        std::vector< piecewise_polynomial<double,MPREAL> > u_basis_, v_basis_;
 
     public:
         /**
@@ -61,7 +62,7 @@ namespace irlib {
          * @return   The value of u_l(x)
          */
         double ulx(int l, double x) const throw(std::runtime_error) {
-            return ulx(l, mpfr::mpreal(x));
+            return ulx(l, MPREAL(x));
         }
 
         /**
@@ -70,7 +71,7 @@ namespace irlib {
          * @return   The value of v_l(y)
          */
         double vly(int l, double y) const throw(std::runtime_error) {
-            return vly(l, mpfr::mpreal(y));
+            return vly(l, MPREAL(y));
         }
 
 #ifndef SWIG //DO NOT EXPOSE TO PYTHON
@@ -80,7 +81,7 @@ namespace irlib {
          * @param x  x on [-1,1]
          * @return   The value of u_l(x)
          */
-        double ulx(int l, const mpfr::mpreal& x) const throw(std::runtime_error) {
+        double ulx(int l, const MPREAL& x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -105,7 +106,7 @@ namespace irlib {
          * @param y  y on [-1,1]
          * @return   The value of v_l(y)
          */
-        double vly(int l, const mpfr::mpreal& y) const throw(std::runtime_error) {
+        double vly(int l, const MPREAL& y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -128,13 +129,13 @@ namespace irlib {
          * @param l l-th basis function
          * @return  reference to the l-th basis function
          */
-        const irlib::piecewise_polynomial<double,mpfr::mpreal> &ul(int l) const throw(std::runtime_error) {
+        const piecewise_polynomial<double,MPREAL> &ul(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return u_basis_[l];
         }
 
-        const irlib::piecewise_polynomial<double,mpfr::mpreal> &vl(int l) const throw(std::runtime_error) {
+        const piecewise_polynomial<double,MPREAL> &vl(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return v_basis_[l];
@@ -144,7 +145,7 @@ namespace irlib {
         /**
          * Return a reference to all basis functions
          */
-        //const std::vector<irlib::piecewise_polynomial<double> > all() const { return u_basis_; }
+        //const std::vector<piecewise_polynomial<double> > all() const { return u_basis_; }
 
         /**
          * Return number of basis functions
@@ -208,21 +209,25 @@ namespace irlib {
 
     };
 
+#ifdef SWIG
+%template(mpreal_basis_set) basis_set<mpfr::mpreal>;
+#endif
+
     /**
      * Fermionic IR basis
      */
-    class basis_f : public ir_basis_set {
+    class basis_f : public basis_set<mpfr::mpreal> {
     public:
         basis_f(double Lambda, int max_dim, double cutoff = 1e-12, int Nl=10) throw(std::runtime_error)
-                : ir_basis_set(fermionic_kernel(Lambda), max_dim, cutoff, Nl) {}
+                : basis_set(fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, Nl) {}
     };
 
     /**
      * Bosonic IR basis
      */
-    class basis_b : public ir_basis_set {
+    class basis_b : public basis_set<mpfr::mpreal> {
     public:
         basis_b(double Lambda, int max_dim, double cutoff = 1e-12, int Nl=10) throw(std::runtime_error)
-                : ir_basis_set(bosonic_kernel(Lambda), max_dim, cutoff, Nl) {}
+                : basis_set(bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, Nl) {}
     };
 }

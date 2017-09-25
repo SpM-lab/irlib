@@ -42,10 +42,14 @@ namespace irlib {
     %template(real_kernel) kernel<mpfr::mpreal>;
 #endif
 
+    template<typename MPREAL> class fermionic_kernel;
+    template<typename MPREAL> class bosonic_kernel;
+
     /**
      * Fermionic kernel
      */
-    class fermionic_kernel : public kernel<mpfr::mpreal> {
+    template<>
+    class fermionic_kernel<mpfr::mpreal> : public kernel<mpfr::mpreal> {
     public:
         fermionic_kernel(double Lambda) : Lambda_(Lambda) {}
 
@@ -87,7 +91,8 @@ namespace irlib {
     /**
      * Bosonic kernel
      */
-    class bosonic_kernel : public kernel<mpfr::mpreal> {
+    template<>
+    class bosonic_kernel<mpfr::mpreal> : public kernel<mpfr::mpreal> {
     public:
         bosonic_kernel(double Lambda) : Lambda_(Lambda) {}
 
@@ -284,8 +289,8 @@ namespace irlib {
                 mpreal norm = (vectors[v].transpose() * vectors[v])(0,0);
                 assert(mpfr::abs(norm - 1) < 1e-8);
 
-                boost::multi_array<double,2> coeff(boost::extents[ns_pp][Nl]);
-                std::fill(coeff.origin(), coeff.origin()+coeff.num_elements(), 0.0);
+                Eigen::MatrixXd coeff(ns_pp, Nl);
+                coeff.setZero();
                 int parity = v%2 == 0 ? 1 : -1;
                 // loop over sections in [0, 1]
                 for (int s=0; s<section_edges.size()-1; ++s) {
@@ -297,7 +302,7 @@ namespace irlib {
                             auto tmp = static_cast<double>(
                                     inv_factorial[d] * coeff2 * vectors[v][s*Nl+l] * deriv_xm1[l][d]
                             );
-                            coeff[s][d] += tmp;
+                            coeff(s, d) += tmp;
                             coeff2 *= 2 / (section_edges[s + 1] - section_edges[s]);
                         }
                     }

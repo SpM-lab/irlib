@@ -48,7 +48,7 @@ namespace irlib {
         const int n_points = x_array.size();
         const int n_section = n_points - 1;
 
-        boost::multi_array<double, 2> coeff(boost::extents[n_section][4]);
+        Eigen::MatrixXd coeff(n_section, 4);
 
         // Cubic spline interpolation
         tk::spline spline;
@@ -61,7 +61,7 @@ namespace irlib {
         // Construct piecewise_polynomial
         for (int s = 0; s < n_section; ++s) {
             for (int p = 0; p < 4; ++p) {
-                coeff[s][p] = spline.get_coeff(s, p);
+                coeff(s, p) = spline.get_coeff(s, p);
             }
         }
         piecewise_polynomial<T,Tx> tmp(n_section, x_array, coeff);
@@ -87,7 +87,7 @@ namespace irlib {
         std::vector<double> nodes;
 
         auto leg_diff = [](int l, double x) {
-            return l * (x * boost::math::legendre_p(l, x) - boost::math::legendre_p(l - 1, x)) / (x * x - 1);
+            return l * (x * legendre_p(l, x) - legendre_p(l - 1, x)) / (x * x - 1);
         };
 
         //i-th zero
@@ -97,7 +97,7 @@ namespace irlib {
 
             //Newton-Raphson iteration
             while (true) {
-                double leg = boost::math::legendre_p(l, x);
+                double leg = legendre_p(l, x);
                 double x_new = x - 0.1 * leg / leg_diff(l, x);
                 if (std::abs(x_new - x) < eps && std::abs(leg) < eps) {
                     break;
@@ -144,11 +144,11 @@ namespace irlib {
             const std::vector<double> &w,
             const std::vector<Tx> &section_edges,
             int k,
-            boost::multi_array<std::complex<T>, 3> &coeffs) {
+            Eigen::Tensor<std::complex<T>, 3> &coeffs) {
         const int N = section_edges.size() - 1;
 
         std::complex<double> z;
-        coeffs.resize(boost::extents[w.size()][N][k + 1]);
+        coeffs = Eigen::Tensor<std::complex<T>,3>(w.size(), N, k + 1);
 
         std::vector<double> pre_factor(k + 1);
         pre_factor[0] = 1.0;
@@ -163,7 +163,7 @@ namespace irlib {
                 std::complex<T> exp0 = std::exp(z * (x + 1));
                 std::complex<T> z_power = 1.0;
                 for (int j = 0; j < k + 1; ++j) {
-                    coeffs[n][section][j] = exp0 * z_power * pre_factor[j];
+                    coeffs(n, section, j) = exp0 * z_power * pre_factor[j];
                     z_power *= z;
                 }
             }
@@ -238,7 +238,7 @@ namespace irlib {
         //Use Taylor expansion for exp(i w_n tau) for w_n*dx < cutoff*M_PI
         const double cutoff = 0.1;
 
-        boost::multi_array<std::complex<double>, 3> exp_coeffs(boost::extents[w.size()][n_section][k_iw + 1]);
+        Eigen::Tensor<std::complex<double>,3> exp_coeffs(w.size(), n_section, k_iw + 1);
         construct_exp_functions_coeff(w, pp_func[0].section_edges(), k_iw, exp_coeffs);
 
         matrix_t left_mid_matrix(n_iw, k + 1);
@@ -279,7 +279,7 @@ namespace irlib {
 
                 for (int n = 0; n < n_max_cs + 1; ++n) {
                     for (int p = 0; p < k_iw + 1; ++p) {
-                        left_matrix(n, p) = exp_coeffs[n][s][p];
+                        left_matrix(n, p) = exp_coeffs(n,s,p);
                     }
                 }
 
@@ -447,7 +447,7 @@ namespace irlib {
     void compute_overlap(
             const std::vector<piecewise_polynomial<T1,Tx> > &left_vectors,
             const std::vector<piecewise_polynomial<T2,Tx> > &right_vectors,
-            boost::multi_array<typename result_of_overlap<T1, T2>::value, 2> &results) {
+            Eigen::Matrix<typename result_of_overlap<T1, T2>::value, Eigen::Dynamic, Eigen::Dynamic> &results) {
         typedef typename result_of_overlap<T1, T2>::value Tr;
 
         const int NL = left_vectors.size();
@@ -490,9 +490,9 @@ namespace irlib {
         Eigen::Matrix<Tr, Eigen::Dynamic, Eigen::Dynamic> mid_matrix(k1 + 1, k2 + 1);
         Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> left_matrix(NL, k1 + 1);
         Eigen::Matrix<T2, Eigen::Dynamic, Eigen::Dynamic> right_matrix(k2 + 1, NR);
-        Eigen::Matrix<Tr, Eigen::Dynamic, Eigen::Dynamic> r(NL, NR);
+        results.resize(NL, NR);
 
-        r.setZero();
+        results.setZero();
         for (int s = 0; s < n_sections; ++s) {
             dx_power[0] = 1.0;
             const double dx = left_vectors[0].section_edge(s + 1) - left_vectors[0].section_edge(s);
@@ -518,15 +518,9 @@ namespace irlib {
                 }
             }
 
-            r += left_matrix * (mid_matrix * right_matrix);
+            results += left_matrix * (mid_matrix * right_matrix);
         }
 
-        results.resize(boost::extents[NL][NR]);
-        for (int n = 0; n < NL; ++n) {
-            for (int l = 0; l < NR; ++l) {
-                results[n][l] = r(n, l);
-            }
-        }
     }
 
 

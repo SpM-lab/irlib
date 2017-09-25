@@ -5,22 +5,23 @@
 namespace irlib {
 
     namespace detail {
-        using mpfr::mpreal;
 
-        inline mpreal
-        legendre_next(unsigned l, const mpreal &x, const mpreal &Pl, const mpreal &Plm1) {
-            mpreal mp_l(l);
+        template<typename MPREAL>
+        MPREAL
+        legendre_next(unsigned l, const MPREAL &x, const MPREAL &Pl, const MPREAL &Plm1) {
+            MPREAL mp_l(l);
             return ((2 * mp_l + 1) * x * Pl - mp_l * Plm1) / (mp_l + 1);
         }
 
-        inline mpfr::mpreal
-        legendre_p_impl(unsigned int l, const mpfr::mpreal &x) {
-            if (x < mpfr::mpreal(-1) || x > mpfr::mpreal(1)) {
+        template<typename MPREAL>
+        MPREAL
+        legendre_p_impl(unsigned int l, const MPREAL &x) {
+            if (x < MPREAL(-1) || x > MPREAL(1)) {
                 throw std::runtime_error("Legendre polynomials are defined for -1<=x<=1");
             }
 
-            mpfr::mpreal p0(1);
-            mpfr::mpreal p1(x);
+            MPREAL p0(1);
+            MPREAL p1(x);
 
             if (l == 0) {
                 return p0;
@@ -38,14 +39,16 @@ namespace irlib {
 
     }
 
-    inline mpfr::mpreal
-    legendre_p(unsigned int l, const mpfr::mpreal &x) {
+    template<typename MPREAL>
+    MPREAL
+    legendre_p(unsigned int l, const MPREAL &x) {
         return detail::legendre_p_impl(l, x);
     }
 
-    inline mpfr::mpreal
-    normalized_legendre_p(unsigned int l, const mpfr::mpreal &x) {
-        return mpfr::sqrt(mpfr::mpreal(l) + mpfr::mpreal(0.5)) * legendre_p(l, x);
+    template<typename MPREAL>
+    MPREAL
+    normalized_legendre_p(unsigned int l, const MPREAL &x) {
+        return sqrt(MPREAL(l) + MPREAL(0.5)) * legendre_p(l, x);
     }
 
     /**
@@ -54,11 +57,11 @@ namespace irlib {
      * @param x  -1 <= x <= 1
      * @return   Two dimension arrays (l, d). l is the index of polynoamials. d is the order of the derivatives.
      */
-    inline std::vector<std::vector<mpfr::mpreal>>
-    normalized_legendre_p_derivatives(unsigned int Nl, const mpfr::mpreal &x) {
-        using mpfr::mpreal;
-        using matrix_t = Eigen::Matrix<mpfr::mpreal, Eigen::Dynamic, Eigen::Dynamic>;
-        using vector_t = Eigen::Matrix<mpfr::mpreal, Eigen::Dynamic, 1>;
+    template<typename MPREAL>
+    std::vector<std::vector<MPREAL>>
+    normalized_legendre_p_derivatives(unsigned int Nl, const MPREAL &x) {
+        using matrix_t = Eigen::Matrix<MPREAL, Eigen::Dynamic, Eigen::Dynamic>;
+        using vector_t = Eigen::Matrix<MPREAL, Eigen::Dynamic, 1>;
 
         matrix_t S(Nl, Nl);
 
@@ -66,7 +69,7 @@ namespace irlib {
         for (int l1=0; l1<Nl; ++l1) {
             for (int l2=0; l2<Nl; ++l2) {
                 if ((l1+l2)%2 == 0) {
-                    S(l1, l2) = mpreal(2)/(mpreal(l1)+mpreal(l2)+mpreal(1));
+                    S(l1, l2) = MPREAL(2)/(MPREAL(l1)+MPREAL(l2)+MPREAL(1));
                 } else {
                     S(l1, l2) = 0.0;
                 }
@@ -78,7 +81,7 @@ namespace irlib {
         for (int l=0; l<Nl; ++l) {
             vector_t  b(Nl);
             b.setZero();
-            b(l) = mpreal(1);
+            b(l) = MPREAL(1);
             basis.push_back(b);
         }
 
@@ -90,7 +93,7 @@ namespace irlib {
             for (int l2 = 0; l2 < l1; ++l2) {
                 basis[l1] -= (dot_product(basis[l1], basis[l2])/dot_product(basis[l2], basis[l2])) * basis[l2];
             }
-            basis[l1] /= mpfr::sqrt(dot_product(basis[l1], basis[l1]));
+            basis[l1] /= sqrt(dot_product(basis[l1], basis[l1]));
         }
 
         // compute the derived function of a given function
@@ -104,9 +107,9 @@ namespace irlib {
         };
 
         // evaluate the value of a given function at a given x
-        auto eval = [](const vector_t& b, const mpreal& x) {
-            mpreal xn(1);
-            mpreal val(0);
+        auto eval = [](const vector_t& b, const MPREAL& x) {
+            MPREAL xn(1);
+            MPREAL val(0);
             for (int n=0; n<b.rows(); ++n) {
                 val += b[n] * xn;
                 xn *= x;
@@ -114,9 +117,9 @@ namespace irlib {
             return val;
         };
 
-        std::vector<std::vector<mpreal> > derivatives;
+        std::vector<std::vector<MPREAL> > derivatives;
         for (int l1=0; l1<Nl; ++l1) {
-            std::vector<mpreal> db(Nl, mpreal(0));
+            std::vector<MPREAL> db(Nl, MPREAL(0));
             auto b = basis[l1];
             for (int d=0; d<Nl; ++d) {
                 db[d] = eval(b, x);

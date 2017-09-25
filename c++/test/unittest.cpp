@@ -10,7 +10,7 @@ TEST(PiecewisePolynomial, Orthogonalization) {
     typedef irlib::piecewise_polynomial<Scalar,mpreal> pp_type;
 
     std::vector<mpreal> section_edges(n_section+1);
-    boost::multi_array<Scalar,3> coeff(boost::extents[n_basis][n_section][k+1]);
+    Eigen::Tensor<Scalar,3> coeff(n_basis, n_section, k+1);
 
     for (int s = 0; s < n_section + 1; ++s) {
         section_edges[s] = s*2.0/n_section - 1.0;
@@ -22,8 +22,8 @@ TEST(PiecewisePolynomial, Orthogonalization) {
 
     // x^0, x^1, x^2, ...
     for (int n = 0; n < n_basis; ++ n) {
-        boost::multi_array<Scalar,2> coeff(boost::extents[n_section][k+1]);
-        std::fill(coeff.origin(), coeff.origin()+coeff.num_elements(), 0.0);
+        Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> coeff(n_section, k+1);
+        coeff.setZero();
 
         for (int s = 0; s < n_section; ++s) {
             double rtmp = 1.0;
@@ -35,7 +35,7 @@ TEST(PiecewisePolynomial, Orthogonalization) {
                     rtmp /= l;
                     rtmp *= n + 1 - l;
                 }
-                coeff[s][l] = static_cast<double>(rtmp * pow(section_edges[s], n-l));
+                coeff(s, l) = static_cast<double>(rtmp * pow(section_edges[s], n-l));
             }
         }
 
@@ -134,7 +134,7 @@ TYPED_TEST(HighTTest, BasisTypes) {
       const int N_iw = 3;
       //time_t t1, t2;
 
-      boost::multi_array<std::complex<double>,2> Tnl_legendre(boost::extents[N_iw][3]);
+      Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic> Tnl_legendre(N_iw, 3);
 
       compute_Tnl_legendre(N_iw, 3, Tnl_legendre);
 
@@ -146,7 +146,7 @@ TYPED_TEST(HighTTest, BasisTypes) {
       auto Tnl_ir = basis.compute_Tnl(n_vec);
       for (int n = 0; n < N_iw; n++) {
         for (int l = 0; l < 3; ++l) {
-          ASSERT_NEAR(std::abs(Tnl_ir(n,l) / (Tnl_legendre[n][l]) - 1.0), 0.0, 1e-5);
+          ASSERT_NEAR(std::abs(Tnl_ir(n,l) / (Tnl_legendre(n, l)) - 1.0), 0.0, 1e-5);
         }
       }
     }
@@ -197,7 +197,7 @@ TEST(IrBasis, FermionInsulatingGtau) {
 
     //to matsubara freq.
     const int n_iw = 1000;
-    boost::multi_array<std::complex<double>,2> Tnl(boost::extents[n_iw][basis.dim()]);
+    MatrixXc Tnl(n_iw, basis.dim());
     std::vector<long> n_vec;
     for (int n=0; n<n_iw; ++n) {
         n_vec.push_back(n);

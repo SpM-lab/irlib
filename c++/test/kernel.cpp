@@ -70,7 +70,7 @@ TEST(kernel, SVD) {
         std::vector<IR_MPREAL> section_edges_x = linspace<IR_MPREAL>(-1, 1, num_sec+1);
         std::vector<IR_MPREAL> section_edges_y = linspace<IR_MPREAL>(-1, 1, num_sec+1);
 
-        fermionic_kernel kernel(Lambda);
+        fermionic_kernel<mpreal> kernel(Lambda);
         auto Kmat = matrix_rep(kernel, section_edges_x, section_edges_y, num_local_nodes, Nl);
 
         Eigen::BDCSVD<MatrixXmp> svd(Kmat, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -87,7 +87,7 @@ TEST(kernel, SVD) {
         std::vector<IR_MPREAL> section_edges_x = linspace<IR_MPREAL>(0, 1, num_sec/2+1);
         std::vector<IR_MPREAL> section_edges_y = linspace<IR_MPREAL>(0, 1, num_sec/2+1);
 
-        fermionic_kernel kernel(Lambda);
+        fermionic_kernel<mpreal> kernel(Lambda);
         auto kernel_even = [&](const IR_MPREAL& x, const IR_MPREAL& y) {
             return kernel(x, y) + kernel(x, -y);
         };
@@ -114,10 +114,10 @@ TEST(kernel, transformation_to_matsubara) {
     int ns = 1000;
     int k = 3;
 
-    boost::multi_array<double,2> coeff(boost::extents[ns][k+1]);
-    std::fill(coeff.origin(), coeff.origin()+coeff.num_elements(), 0.0);
+    Eigen::MatrixXd coeff(ns, k+1);
+    coeff.setZero();
     for (int s=0; s<ns; ++s) {
-        coeff[s][0] = std::sqrt(0.5);
+        coeff(s,0) = std::sqrt(0.5);
     }
 
     auto section_edges = linspace<IR_MPREAL>(IR_MPREAL(0.0), IR_MPREAL(1.0), ns+1);
@@ -141,7 +141,7 @@ TEST(kernel, basis_functions) {
     int max_dim = 30;
     int Nl = 10;
 
-    fermionic_kernel kernel(Lambda);
+    fermionic_kernel<mpreal> kernel(Lambda);
 
     std::vector<double> sv;
     std::vector<pp_type> u_basis, v_basis;
