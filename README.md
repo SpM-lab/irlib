@@ -1,6 +1,6 @@
 irlib
 ======
-C++ header-file only library for generating kernel "intermediate-representation" (ir) basis
+C++ header-file only library for generating kernel "intermediate-representation" (ir) basis written by Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki,
 
 # Table of Contents
 - [Requirements](#requirements)
@@ -15,10 +15,10 @@ C++ header-file only library for generating kernel "intermediate-representation"
 ### GMP (>= 4.21)
 
 ### Python 2.7 or 3.5
-For buildiing Python binding
+For building Python binding
 
 ### SWIG (>= 3.0)
-For buildiing Python binding
+For building Python binding
 
 ## Installation
 See the following sample.
@@ -41,4 +41,4 @@ $ make && sudo make install
 You can find examples below the directory "examples" in the source directory.
 
 ## License
-This library is licensed under GPLv3 or any later version. See LICENSE.txt for more details.
+All files except for those in the directory "thirdparty" are licensed under GPLv3 or any later version. See LICENSE.txt for more details.
