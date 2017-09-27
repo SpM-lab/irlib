@@ -29,11 +29,11 @@ namespace irlib {
          * @param knl  kernel
          * @param max_dim  max number of basis functions to be computed.
          * @param cutoff  we drop basis functions corresponding to small singular values  |s_l/s_0~ < cutoff.
-         * @param Nl   Number of Legendre polynomials used to expand basis functions in each sector
+         * @param n_local_poly   Number of Legendre polynomials used to expand basis functions in each sector
          */
-        basis_set(const irlib::kernel<MPREAL> &knl, int max_dim, double cutoff, int Nl) throw(std::runtime_error) {
+        basis_set(const irlib::kernel<MPREAL> &knl, int max_dim, double cutoff, int n_local_poly) throw(std::runtime_error) {
             statistics_ = knl.get_statistics();
-            std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions(knl, max_dim, cutoff, Nl);
+            std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions(knl, max_dim, cutoff, n_local_poly);
             assert(u_basis_.size()>0);
             assert(u_basis_[0].num_sections()>0);
         }
@@ -218,8 +218,8 @@ namespace irlib {
      */
     class basis_f : public basis_set<mpfr::mpreal> {
     public:
-        basis_f(double Lambda, int max_dim, double cutoff = 1e-12, int Nl=10) throw(std::runtime_error)
-                : basis_set(fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, Nl) {}
+        basis_f(double Lambda, int max_dim = 10000, double cutoff = 1e-12, int n_local_poly=10) throw(std::runtime_error)
+                : basis_set(fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 
     /**
@@ -227,7 +227,7 @@ namespace irlib {
      */
     class basis_b : public basis_set<mpfr::mpreal> {
     public:
-        basis_b(double Lambda, int max_dim, double cutoff = 1e-12, int Nl=10) throw(std::runtime_error)
-                : basis_set(bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, Nl) {}
+        basis_b(double Lambda, int max_dim = 10000, double cutoff = 1e-12, int n_local_poly=10) throw(std::runtime_error)
+                : basis_set(bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 }
