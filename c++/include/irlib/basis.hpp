@@ -86,12 +86,6 @@ namespace irlib {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(x >= -1 && x <= 1, "x must be in [-1,1].");
-            if (l < 0 || l >= dim()) {
-                throw std::runtime_error("Invalid index of basis function!");
-            }
-            if (x < -1 || x > 1) {
-                throw std::runtime_error("Invalid value of x!");
-            }
 
             if (x >= 0) {
                 return u_basis_[l].compute_value(x);
@@ -111,12 +105,6 @@ namespace irlib {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(y >= -1 && y <= 1, "y must be in [-1,1].");
-            if (l < 0 || l >= dim()) {
-                throw std::runtime_error("Invalid index of basis function!");
-            }
-            if (y < -1 || y > 1) {
-                throw std::runtime_error("Invalid value of y!");
-            }
             if (y >= 0) {
                 return v_basis_[l].compute_value(y);
             } else {
