@@ -5,34 +5,23 @@
 
 #include <Eigen/MPRealSupport>
 #include <Eigen/SVD>
-//#include <Eigen/LU>
-
-//#include "../include/irlib/gauss_legendre.hpp"
+#include <irlib/common.hpp>
 #include <irlib/detail/gauss_legendre.hpp>
 #include <irlib/detail/legendre_polynomials.hpp>
 
-using mpfr::mpreal;
-
-//template <class T> void test(T&& t, T&& t2) {}
-
-//template <class T>
-//void make_pair_test(T&& t1, T&& t2)
-//{
-    //return pair<typename __make_pair_return<_T1>::type, typename __make_pair_return<_T2>::type>
-            //(_VSTD::forward<_T1>(__t1), _VSTD::forward<_T2>(__t2));
-//}
+using namespace irlib;
 
 TEST(mpmath, SVD) {
 
-    mpreal::set_default_prec(167);
+    ir_set_default_prec(167);
 
-    //mpreal x{1};
-    //test<mpreal>(x, x);
-    //make_pair_test<mpreal,mpreal>(x, x);
+    //MPREAL x{1};
+    //test<MPREAL>(x, x);
+    //make_pair_test<MPREAL,MPREAL>(x, x);
 
     // Declare matrix and vector types with multi-precision scalar type
-    typedef Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
-    typedef Eigen::Matrix<mpreal,Eigen::Dynamic,1>        VectorXmp;
+    typedef Eigen::Matrix<MPREAL,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
+    typedef Eigen::Matrix<MPREAL,Eigen::Dynamic,1>        VectorXmp;
 
     int N = 10;
     MatrixXmp A = MatrixXmp::Random(N,N);
@@ -49,28 +38,28 @@ TEST(mpmath, SVD) {
 }
 
 TEST(mpmath, gauss_legenre) {
-    mpreal::set_default_prec(167);
+    ir_set_default_prec(167);
 
     //Integrate x**2 over [-1, 1]
     for (int degree : std::vector<int>{6, 12, 24}) {
-        std::vector<std::pair<mpreal,mpreal>> nodes = irlib::detail::gauss_legendre_nodes<mpreal>(degree);
+        std::vector<std::pair<MPREAL,MPREAL>> nodes = irlib::detail::gauss_legendre_nodes<MPREAL>(degree);
 
-        mpreal sum = 0.0;
+        MPREAL sum = 0.0;
         for (auto n : nodes) {
             sum += (n.first*n.first) * n.second;
         }
-        ASSERT_TRUE(mpfr::abs(sum - mpreal(2.0)/mpreal(3.0)) < 1e-48);
+        ASSERT_TRUE(abs(sum - MPREAL(2.0)/MPREAL(3.0)) < 1e-48);
     }
 }
 
 TEST(mpmath, legendre_polynomials) {
-    mpreal::set_default_prec(167);
+    ir_set_default_prec(167);
 
     int Nl = 100;
 
-    mpreal x("0.5");
+    MPREAL x("0.5");
 
-    std::vector<mpreal> vals(Nl);
+    std::vector<MPREAL> vals(Nl);
 
     for (int l=0; l<Nl; ++l) {
         vals[l] = irlib::legendre_p(l, x);
@@ -80,31 +69,31 @@ TEST(mpmath, legendre_polynomials) {
         auto mp_l(l);
         auto left_side = (mp_l+1) * vals[l+1];
         auto right_side = (2*mp_l+1) * x * vals[l] - mp_l * vals[l-1];
-        ASSERT_TRUE(mpfr::abs(left_side-right_side) < 1e-40);
+        ASSERT_TRUE(abs(left_side-right_side) < 1e-40);
     }
 }
 
 
 TEST(mpmath, normalized_legendre_polynomials_derivatives) {
-    mpreal::set_default_prec(167);
+    ir_set_default_prec(167);
 
     int Nl = 3;
-    mpreal x(1);
+    MPREAL x(1);
     auto deriv = irlib::normalized_legendre_p_derivatives(Nl, x);
 
     //0-th normalized Legendre polynomial
-    ASSERT_TRUE(mpfr::abs(deriv[0][0]-1/mpfr::sqrt(2)) < 1e-40);
-    ASSERT_TRUE(mpfr::abs(deriv[0][1]) < 1e-40);
+    ASSERT_TRUE(abs(deriv[0][0]-1/sqrt(2)) < 1e-40);
+    ASSERT_TRUE(abs(deriv[0][1]) < 1e-40);
 
     //1-th normalized Legendre polynomial
-    ASSERT_TRUE(mpfr::abs(deriv[1][0]-mpfr::sqrt(mpreal(3)/mpreal(2))) < 1e-40);
-    ASSERT_TRUE(mpfr::abs(deriv[1][1]-mpfr::sqrt(mpreal(3)/mpreal(2))) < 1e-40);
+    ASSERT_TRUE(abs(deriv[1][0]-sqrt(MPREAL(3)/MPREAL(2))) < 1e-40);
+    ASSERT_TRUE(abs(deriv[1][1]-sqrt(MPREAL(3)/MPREAL(2))) < 1e-40);
 
     //2-th normalized Legendre polynomial
-    auto f0 = mpfr::sqrt(mpreal(5)/mpreal(2));
-    auto f1 = mpfr::sqrt(mpreal(5)/mpreal(2)) * mpreal(3);
-    ASSERT_TRUE(mpfr::abs(deriv[2][0]-f0) < 1e-40);
-    ASSERT_TRUE(mpfr::abs(deriv[2][1]-f1) < 1e-40);
-    ASSERT_TRUE(mpfr::abs(deriv[2][2]-f1) < 1e-40);
+    auto f0 = sqrt(MPREAL(5)/MPREAL(2));
+    auto f1 = sqrt(MPREAL(5)/MPREAL(2)) * MPREAL(3);
+    ASSERT_TRUE(abs(deriv[2][0]-f0) < 1e-40);
+    ASSERT_TRUE(abs(deriv[2][1]-f1) < 1e-40);
+    ASSERT_TRUE(abs(deriv[2][2]-f1) < 1e-40);
 
 }

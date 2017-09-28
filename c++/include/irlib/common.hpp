@@ -33,12 +33,22 @@ namespace irlib {
     using mpfr::cosh;
     using mpfr::sinh;
 
-    using pp_type = piecewise_polynomial<double,mpreal>;
-    using IR_MPREAL = mpfr::mpreal;
+    using MPREAL = mpfr::mpreal;
+    using pp_type = piecewise_polynomial<double,MPREAL>;
+
+    using MatrixXmp = Eigen::Matrix<mpfr::mpreal,Eigen::Dynamic,Eigen::Dynamic>;
+    using MatrixXc = Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>;
+
+    inline void ir_set_default_prec(mp_prec_t prec) {
+        mpfr::mpreal::set_default_prec(prec);
+    }
+
+    inline mp_prec_t  ir_get_default_prec() {
+        return mpfr::mpreal::get_default_prec();
+    }
+
+    inline mp_prec_t ir_digits2bits(mp_prec_t prec) {
+        return mpfr::digits2bits(prec);
+    }
 }
-
-
-
-using MatrixXmp = Eigen::Matrix<mpfr::mpreal,Eigen::Dynamic,Eigen::Dynamic>;
-using MatrixXc = Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>;
 

@@ -39,7 +39,7 @@ namespace irlib {
     };
 
 #ifdef SWIG
-    %template(real_kernel) kernel<mpfr::mpreal>;
+    %template(real_kernel) kernel<MPREAL>;
 #endif
 
     template<typename MPREAL> class fermionic_kernel;
@@ -49,14 +49,14 @@ namespace irlib {
      * Fermionic kernel
      */
     template<>
-    class fermionic_kernel<mpfr::mpreal> : public kernel<mpfr::mpreal> {
+    class fermionic_kernel<MPREAL> : public kernel<MPREAL> {
     public:
         fermionic_kernel(double Lambda) : Lambda_(Lambda) {}
 
         virtual ~fermionic_kernel() {};
 
-        mpfr::mpreal operator()(mpfr::mpreal x, mpfr::mpreal y) const {
-            mpfr::mpreal half_Lambda = mpfr::mpreal("0.5") * mpfr::mpreal(Lambda_);
+        MPREAL operator()(MPREAL x, MPREAL y) const {
+            MPREAL half_Lambda = MPREAL("0.5") * MPREAL(Lambda_);
 
             const double limit = 200.0;
             if (Lambda_ * y > limit) {
@@ -92,15 +92,15 @@ namespace irlib {
      * Bosonic kernel
      */
     template<>
-    class bosonic_kernel<mpfr::mpreal> : public kernel<mpfr::mpreal> {
+    class bosonic_kernel<MPREAL> : public kernel<MPREAL> {
     public:
         bosonic_kernel(double Lambda) : Lambda_(Lambda) {}
 
         virtual ~bosonic_kernel() {};
 
-        mpfr::mpreal operator()(mpfr::mpreal x, mpfr::mpreal y) const {
+        MPREAL operator()(MPREAL x, MPREAL y) const {
             const double limit = 200.0;
-            mpfr::mpreal half_Lambda = mpfr::mpreal("0.5") * mpfr::mpreal(Lambda_);
+            MPREAL half_Lambda = MPREAL("0.5") * MPREAL(Lambda_);
 
             if (mpfr::abs(Lambda_ * y) < 1e-30) {
                 return mpfr::exp(-half_Lambda * x * y) / Lambda_;
@@ -219,17 +219,16 @@ namespace irlib {
             std::vector<pp_type>
             >
     generate_ir_basis_functions_impl(
-            const kernel<mpfr::mpreal>& kernel,
+            const kernel<MPREAL>& kernel,
             int max_dim,
             double sv_cutoff,
             int Nl,
             int num_nodes_gauss_legendre,
-            const std::vector<mpfr::mpreal>& section_edges_x,
-            const std::vector<mpfr::mpreal>& section_edges_y,
+            const std::vector<MPREAL>& section_edges_x,
+            const std::vector<MPREAL>& section_edges_y,
             std::vector<double>& residual_x,
             std::vector<double>& residual_y
     ) throw(std::runtime_error) {
-        using mpfr::mpreal;
         using vector_t = Eigen::Matrix<mpreal, Eigen::Dynamic, 1>;
 
         if (Nl < 2) {
@@ -353,14 +352,13 @@ namespace irlib {
             std::vector<pp_type>
     >
     generate_ir_basis_functions(
-            const kernel<mpfr::mpreal>& kernel,
+            const kernel<MPREAL>& kernel,
             int max_dim,
             double sv_cutoff = 1e-12,
             int Nl = 10,
             int num_nodes_gauss_legendre = 12,
             double aeps = 1e-8
     ) throw(std::runtime_error) {
-        using mpfr::mpreal;
         using vector_t = Eigen::Matrix<mpreal, Eigen::Dynamic, 1>;
 
         // Increase default precision if needed

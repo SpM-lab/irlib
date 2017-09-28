@@ -198,24 +198,24 @@ namespace irlib {
     };
 
 #ifdef SWIG
-%template(mpreal_basis_set) basis_set<mpfr::mpreal>;
+%template(mpreal_basis_set) basis_set<irlib::MPREAL>;
 #endif
 
     /**
      * Fermionic IR basis
      */
-    class basis_f : public basis_set<mpfr::mpreal> {
+    class basis_f : public basis_set<irlib::MPREAL> {
     public:
         basis_f(double Lambda, int max_dim = 10000, double cutoff = 1e-12, int n_local_poly=10) throw(std::runtime_error)
-                : basis_set(fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
+                : basis_set(fermionic_kernel<irlib::MPREAL>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 
     /**
      * Bosonic IR basis
      */
-    class basis_b : public basis_set<mpfr::mpreal> {
+    class basis_b : public basis_set<irlib::MPREAL> {
     public:
         basis_b(double Lambda, int max_dim = 10000, double cutoff = 1e-12, int n_local_poly=10) throw(std::runtime_error)
-                : basis_set(bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
+                : basis_set(bosonic_kernel<irlib::MPREAL>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 }
