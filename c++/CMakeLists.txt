@@ -6,6 +6,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${BLAS_LINKER_FLAGS} ${LAP
 
 install(DIRECTORY "include" DESTINATION "." FILES_MATCHING PATTERN "*.hpp")
 
+file(GLOB_RECURSE header_files *.hpp)
 
 if (Testing)
   #testing source files

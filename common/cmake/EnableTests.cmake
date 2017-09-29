@@ -21,7 +21,7 @@ function(add_gtest test)
         set(gtest_src "gtest/gtest_main.cc;gtest/gtest-all.cc")
     endif(${ARGC} EQUAL 2)
 
-    add_executable(${test} ${source} ${gtest_src})
+    add_executable(${test} ${source} ${gtest_src} ${header_files})
     target_link_libraries(${test} ${LINK_ALL})
     add_test(NAME ${test} COMMAND ${test} ${test_xml_output})
 endfunction(add_gtest)
