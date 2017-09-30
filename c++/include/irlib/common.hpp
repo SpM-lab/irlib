@@ -18,9 +18,9 @@ namespace irlib {
     }
 
     inline bool python_runtime_check(bool b, const std::string& message) {
-#ifdef SWIG
+#ifdef SWIGPYTHON
         if (!b) {
-            std::runtime_error(message);
+            throw std::runtime_error(message);
         }
 #endif
         return b;

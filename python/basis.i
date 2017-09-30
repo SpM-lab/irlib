@@ -3,6 +3,8 @@
 %{
 #define SWIG_FILE_WITH_INIT
 #include <irlib/basis.hpp>
+
+using namespace irlib;
 %}
 
 %include "std_string.i"

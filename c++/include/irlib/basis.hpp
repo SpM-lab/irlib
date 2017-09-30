@@ -74,7 +74,6 @@ namespace irlib {
             return vly(l, MPREAL(y));
         }
 
-#ifndef SWIG //DO NOT EXPOSE TO PYTHON
         /**
          * This function should not be called outside this library
          * @param l  order of basis function
@@ -128,7 +127,6 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return v_basis_[l];
         }
-#endif
 
         /**
          * Return a reference to all basis functions

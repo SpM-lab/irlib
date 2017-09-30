@@ -52,6 +52,13 @@ swig_link_libraries(basis ${PYTHON_LIBRARIES} ${GMP_LIBRARIES} ${MPFR_LIBRARIES}
 install(TARGETS _basis DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/basis.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 
+set_source_files_properties(piecewise_polynomial.i PROPERTIES CPLUSPLUS ON)
+swig_add_library(piecewise_polynomial LANGUAGE python SOURCES piecewise_polynomial.i ${GF_SRCS})
+swig_link_libraries(piecewise_polynomial ${PYTHON_LIBRARIES} ${GMP_LIBRARIES} ${MPFR_LIBRARIES})
+
+install(TARGETS _piecewise_polynomial DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/piecewise_polynomial.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
+
 #configure_file(${CMAKE_SOURCE_DIR}/common/cmake/sitecustomize.py ${CMAKE_CURRENT_BINARY_DIR}/sitecustomize.py @ONLY)
 
 
