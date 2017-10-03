@@ -1,6 +1,10 @@
 irlib
 ======
-C++ header-file only library for generating kernel "intermediate-representation" (ir) basis written by Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki,
+C++ header only library for generating kernel "intermediate-representation" (ir) basis written by Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki,
+Please refer to H. Shinaoka, J. Otsuki, M. Ohzeki and K. Yoshimi, PRB 96, 035147 (2017).
+The basis functions u_l(x) and v_l(y) are orthonormal on the interval [-1,1] with weight 1.
+The sign of u_l(x) is chosen so that u_l(1) > 0.
+
 
 # Table of Contents
 - [Requirements](#requirements)
@@ -32,7 +36,7 @@ $ cmake \
     -DCMAKE_INSTALL_PREFIX=/opt/irlib \
     -DTesting=ON \
     -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_VERBOSE_MAKEFILE=ON ~/git/irlib \
+    -DCMAKE_VERBOSE_MAKEFILE=ON \
     path_to_source_file_directory
 $ make && sudo make install
 ```
