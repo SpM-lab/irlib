@@ -39,24 +39,24 @@ namespace irlib {
     };
 
 #ifdef SWIG
-    %template(real_kernel) kernel<MPREAL>;
+    %template(real_kernel) kernel<mpreal>;
 #endif
 
-    template<typename MPREAL> class fermionic_kernel;
-    template<typename MPREAL> class bosonic_kernel;
+    template<typename mpreal> class fermionic_kernel;
+    template<typename mpreal> class bosonic_kernel;
 
     /**
      * Fermionic kernel
      */
     template<>
-    class fermionic_kernel<MPREAL> : public kernel<MPREAL> {
+    class fermionic_kernel<mpreal> : public kernel<mpreal> {
     public:
         fermionic_kernel(double Lambda) : Lambda_(Lambda) {}
 
         virtual ~fermionic_kernel() {};
 
-        MPREAL operator()(MPREAL x, MPREAL y) const {
-            MPREAL half_Lambda = MPREAL("0.5") * MPREAL(Lambda_);
+        mpreal operator()(mpreal x, mpreal y) const {
+            mpreal half_Lambda = mpreal("0.5") * mpreal(Lambda_);
 
             const double limit = 200.0;
             if (Lambda_ * y > limit) {
@@ -92,15 +92,15 @@ namespace irlib {
      * Bosonic kernel
      */
     template<>
-    class bosonic_kernel<MPREAL> : public kernel<MPREAL> {
+    class bosonic_kernel<mpreal> : public kernel<mpreal> {
     public:
         bosonic_kernel(double Lambda) : Lambda_(Lambda) {}
 
         virtual ~bosonic_kernel() {};
 
-        MPREAL operator()(MPREAL x, MPREAL y) const {
+        mpreal operator()(mpreal x, mpreal y) const {
             const double limit = 200.0;
-            MPREAL half_Lambda = MPREAL("0.5") * MPREAL(Lambda_);
+            mpreal half_Lambda = mpreal("0.5") * mpreal(Lambda_);
 
             if (mpfr::abs(Lambda_ * y) < 1e-30) {
                 return mpfr::exp(-half_Lambda * x * y) / Lambda_;
@@ -219,13 +219,13 @@ namespace irlib {
             std::vector<pp_type>
             >
     generate_ir_basis_functions_impl(
-            const kernel<MPREAL>& kernel,
+            const kernel<mpreal>& kernel,
             int max_dim,
             double sv_cutoff,
             int Nl,
             int num_nodes_gauss_legendre,
-            const std::vector<MPREAL>& section_edges_x,
-            const std::vector<MPREAL>& section_edges_y,
+            const std::vector<mpreal>& section_edges_x,
+            const std::vector<mpreal>& section_edges_y,
             std::vector<double>& residual_x,
             std::vector<double>& residual_y
     ) throw(std::runtime_error) {
@@ -352,7 +352,7 @@ namespace irlib {
             std::vector<pp_type>
     >
     generate_ir_basis_functions(
-            const kernel<MPREAL>& kernel,
+            const kernel<mpreal>& kernel,
             int max_dim,
             double sv_cutoff = 1e-12,
             int Nl = 10,

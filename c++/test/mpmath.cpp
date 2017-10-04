@@ -15,13 +15,13 @@ TEST(mpmath, SVD) {
 
     ir_set_default_prec(167);
 
-    //MPREAL x{1};
-    //test<MPREAL>(x, x);
-    //make_pair_test<MPREAL,MPREAL>(x, x);
+    //mpreal x{1};
+    //test<mpreal>(x, x);
+    //make_pair_test<mpreal,mpreal>(x, x);
 
     // Declare matrix and vector types with multi-precision scalar type
-    typedef Eigen::Matrix<MPREAL,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
-    typedef Eigen::Matrix<MPREAL,Eigen::Dynamic,1>        VectorXmp;
+    typedef Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
+    typedef Eigen::Matrix<mpreal,Eigen::Dynamic,1>        VectorXmp;
 
     int N = 10;
     MatrixXmp A = MatrixXmp::Random(N,N);
@@ -42,13 +42,13 @@ TEST(mpmath, gauss_legenre) {
 
     //Integrate x**2 over [-1, 1]
     for (int degree : std::vector<int>{6, 12, 24}) {
-        std::vector<std::pair<MPREAL,MPREAL>> nodes = irlib::detail::gauss_legendre_nodes<MPREAL>(degree);
+        std::vector<std::pair<mpreal,mpreal>> nodes = irlib::detail::gauss_legendre_nodes<mpreal>(degree);
 
-        MPREAL sum = 0.0;
+        mpreal sum = 0.0;
         for (auto n : nodes) {
             sum += (n.first*n.first) * n.second;
         }
-        ASSERT_TRUE(abs(sum - MPREAL(2.0)/MPREAL(3.0)) < 1e-48);
+        ASSERT_TRUE(abs(sum - mpreal(2.0)/mpreal(3.0)) < 1e-48);
     }
 }
 
@@ -57,9 +57,9 @@ TEST(mpmath, legendre_polynomials) {
 
     int Nl = 100;
 
-    MPREAL x("0.5");
+    mpreal x("0.5");
 
-    std::vector<MPREAL> vals(Nl);
+    std::vector<mpreal> vals(Nl);
 
     for (int l=0; l<Nl; ++l) {
         vals[l] = irlib::legendre_p(l, x);
@@ -78,7 +78,7 @@ TEST(mpmath, normalized_legendre_polynomials_derivatives) {
     ir_set_default_prec(167);
 
     int Nl = 3;
-    MPREAL x(1);
+    mpreal x(1);
     auto deriv = irlib::normalized_legendre_p_derivatives(Nl, x);
 
     //0-th normalized Legendre polynomial
@@ -86,12 +86,12 @@ TEST(mpmath, normalized_legendre_polynomials_derivatives) {
     ASSERT_TRUE(abs(deriv[0][1]) < 1e-40);
 
     //1-th normalized Legendre polynomial
-    ASSERT_TRUE(abs(deriv[1][0]-sqrt(MPREAL(3)/MPREAL(2))) < 1e-40);
-    ASSERT_TRUE(abs(deriv[1][1]-sqrt(MPREAL(3)/MPREAL(2))) < 1e-40);
+    ASSERT_TRUE(abs(deriv[1][0]-sqrt(mpreal(3)/mpreal(2))) < 1e-40);
+    ASSERT_TRUE(abs(deriv[1][1]-sqrt(mpreal(3)/mpreal(2))) < 1e-40);
 
     //2-th normalized Legendre polynomial
-    auto f0 = sqrt(MPREAL(5)/MPREAL(2));
-    auto f1 = sqrt(MPREAL(5)/MPREAL(2)) * MPREAL(3);
+    auto f0 = sqrt(mpreal(5)/mpreal(2));
+    auto f1 = sqrt(mpreal(5)/mpreal(2)) * mpreal(3);
     ASSERT_TRUE(abs(deriv[2][0]-f0) < 1e-40);
     ASSERT_TRUE(abs(deriv[2][1]-f1) < 1e-40);
     ASSERT_TRUE(abs(deriv[2][2]-f1) < 1e-40);

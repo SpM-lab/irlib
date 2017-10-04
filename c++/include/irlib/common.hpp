@@ -33,8 +33,7 @@ namespace irlib {
     using mpfr::cosh;
     using mpfr::sinh;
 
-    using MPREAL = mpfr::mpreal;
-    using pp_type = piecewise_polynomial<double,MPREAL>;
+    using pp_type = piecewise_polynomial<double,mpreal>;
 
     using MatrixXmp = Eigen::Matrix<mpfr::mpreal,Eigen::Dynamic,Eigen::Dynamic>;
     using MatrixXc = Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>;

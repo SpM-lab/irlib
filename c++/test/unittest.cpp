@@ -7,9 +7,9 @@ using namespace irlib;
 TEST(PiecewisePolynomial, Orthogonalization) {
     typedef double Scalar;
     const int n_section = 10, k = 8, n_basis = 3;
-    typedef irlib::piecewise_polynomial<Scalar,MPREAL> pp_type;
+    typedef irlib::piecewise_polynomial<Scalar,mpreal> pp_type;
 
-    std::vector<MPREAL> section_edges(n_section+1);
+    std::vector<mpreal> section_edges(n_section+1);
     Eigen::Tensor<Scalar,3> coeff(n_basis, n_section, k+1);
 
     for (int s = 0; s < n_section + 1; ++s) {
@@ -164,21 +164,21 @@ TEST(IrBasis, FermionInsulatingGtau) {
     irlib::basis_f basis(Lambda, max_dim, 1e-14);
     ASSERT_TRUE(basis.dim()>0);
 
-    typedef irlib::piecewise_polynomial<double,MPREAL> pp_type;
+    typedef irlib::piecewise_polynomial<double,mpreal> pp_type;
 
     const int nptr = basis.ul(0).num_sections() + 1;
-    std::vector<MPREAL> x(nptr);
+    std::vector<mpreal> x(nptr);
     for (int i = 0; i < nptr; ++i) {
       x[i] = basis.ul(0).section_edge(i);
     }
 
-    auto gtau = [&](const MPREAL& x) {return std::exp(-0.5*beta)*cosh(-0.5*beta*x);};
-    auto section_edges = irlib::linspace<MPREAL>(-1, 1, 500);
+    auto gtau = [&](const mpreal& x) {return std::exp(-0.5*beta)*cosh(-0.5*beta*x);};
+    auto section_edges = irlib::linspace<mpreal>(-1, 1, 500);
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
-      auto f = [&](const MPREAL& x) {return MPREAL(gtau(x) * basis.ulx(l,x));};
-      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<MPREAL,MPREAL>(section_edges, f, 12) * beta / std::sqrt(2.0));
+      auto f = [&](const mpreal& x) {return mpreal(gtau(x) * basis.ulx(l,x));};
+      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<mpreal,mpreal>(section_edges, f, 12) * beta / std::sqrt(2.0));
     }
 
     std::vector<double> y_r(nptr, 0.0);

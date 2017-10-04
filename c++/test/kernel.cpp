@@ -23,21 +23,21 @@ TEST(kernel, composite_gauss_legendre_integration) {
 
     ir_set_default_prec(167);
 
-    auto local_nodes = detail::gauss_legendre_nodes<MPREAL>(num_local_nodes);
-    auto section_edges_x = linspace<MPREAL>(-1, 1, num_sec+1);
+    auto local_nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
+    auto section_edges_x = linspace<mpreal>(-1, 1, num_sec+1);
     auto global_nodes = composite_gauss_legendre_nodes(section_edges_x, local_nodes);
 
-    MPREAL sum = 0.0;
+    mpreal sum = 0.0;
     for (auto n : global_nodes) {
         sum += (n.first*n.first) * n.second;
     }
 
-    ASSERT_TRUE(abs(sum - MPREAL(2.0)/MPREAL(3.0)) < 1e-48);
+    ASSERT_TRUE(abs(sum - mpreal(2.0)/mpreal(3.0)) < 1e-48);
 
 }
 
 TEST(kernel, matrixrep) {
-    typedef Eigen::Matrix<MPREAL,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
+    typedef Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
 
     int deci_deg = 50;
     ir_set_default_prec(ir_digits2bits(deci_deg));
@@ -46,18 +46,18 @@ TEST(kernel, matrixrep) {
     int Nl = 6;
     int gauss_legendre_deg = 12;
 
-    std::vector<MPREAL> section_edges_x = linspace<MPREAL>(-1, 1, num_sec+1);
-    std::vector<MPREAL> section_edges_y = linspace<MPREAL>(-1, 1, num_sec+1);
+    std::vector<mpreal> section_edges_x = linspace<mpreal>(-1, 1, num_sec+1);
+    std::vector<mpreal> section_edges_y = linspace<mpreal>(-1, 1, num_sec+1);
 
-    auto const_kernel = [](const MPREAL& x, const MPREAL& y) {return 1.0;};
+    auto const_kernel = [](const mpreal& x, const mpreal& y) {return 1.0;};
     auto Kmat = matrix_rep(const_kernel, section_edges_x, section_edges_y, gauss_legendre_deg, Nl);
 
-    ASSERT_TRUE(abs(Kmat(0,0) - MPREAL(2)) < 1e-30);
+    ASSERT_TRUE(abs(Kmat(0,0) - mpreal(2)) < 1e-30);
     ASSERT_TRUE(abs(Kmat(1,1)) < 1e-30);
 }
 
 TEST(kernel, SVD) {
-    typedef Eigen::Matrix<MPREAL,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
+    typedef Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
 
     int deci_deg = 30;
     ir_set_default_prec(ir_digits2bits(deci_deg));
@@ -67,10 +67,10 @@ TEST(kernel, SVD) {
     double Lambda = 100.0;
     std::vector<int> num_local_nodes_list{12};
     for (int num_local_nodes : num_local_nodes_list) {
-        std::vector<MPREAL> section_edges_x = linspace<MPREAL>(-1, 1, num_sec+1);
-        std::vector<MPREAL> section_edges_y = linspace<MPREAL>(-1, 1, num_sec+1);
+        std::vector<mpreal> section_edges_x = linspace<mpreal>(-1, 1, num_sec+1);
+        std::vector<mpreal> section_edges_y = linspace<mpreal>(-1, 1, num_sec+1);
 
-        fermionic_kernel<MPREAL> kernel(Lambda);
+        fermionic_kernel<mpreal> kernel(Lambda);
         auto Kmat = matrix_rep(kernel, section_edges_x, section_edges_y, num_local_nodes, Nl);
 
         Eigen::BDCSVD<MatrixXmp> svd(Kmat, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -84,14 +84,14 @@ TEST(kernel, SVD) {
 
     //half interval [0, 1]
     for (int num_local_nodes : num_local_nodes_list) {
-        std::vector<MPREAL> section_edges_x = linspace<MPREAL>(0, 1, num_sec/2+1);
-        std::vector<MPREAL> section_edges_y = linspace<MPREAL>(0, 1, num_sec/2+1);
+        std::vector<mpreal> section_edges_x = linspace<mpreal>(0, 1, num_sec/2+1);
+        std::vector<mpreal> section_edges_y = linspace<mpreal>(0, 1, num_sec/2+1);
 
-        fermionic_kernel<MPREAL> kernel(Lambda);
-        auto kernel_even = [&](const MPREAL& x, const MPREAL& y) {
+        fermionic_kernel<mpreal> kernel(Lambda);
+        auto kernel_even = [&](const mpreal& x, const mpreal& y) {
             return kernel(x, y) + kernel(x, -y);
         };
-        auto kernel_odd = [&](const MPREAL& x, const MPREAL& y) {
+        auto kernel_odd = [&](const mpreal& x, const mpreal& y) {
             return kernel(x, y) - kernel(x, -y);
         };
         auto Kmat_even = matrix_rep(kernel_even, section_edges_x, section_edges_y, num_local_nodes, Nl);
@@ -120,7 +120,7 @@ TEST(kernel, transformation_to_matsubara) {
         coeff(s,0) = std::sqrt(0.5);
     }
 
-    auto section_edges = linspace<MPREAL>(MPREAL(0.0), MPREAL(1.0), ns+1);
+    auto section_edges = linspace<mpreal>(mpreal(0.0), mpreal(1.0), ns+1);
 
     auto u_basis = std::vector<pp_type>{pp_type(ns, section_edges, coeff)};
 
@@ -141,7 +141,7 @@ TEST(kernel, basis_functions) {
     int max_dim = 30;
     int Nl = 10;
 
-    fermionic_kernel<MPREAL> kernel(Lambda);
+    fermionic_kernel<mpreal> kernel(Lambda);
 
     std::vector<double> sv;
     std::vector<pp_type> u_basis, v_basis;
