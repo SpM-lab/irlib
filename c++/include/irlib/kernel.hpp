@@ -376,9 +376,6 @@ namespace irlib {
         auto gen_section_edges = [](const std::vector<double>& nodes) {
             std::vector<mpreal> section_edges;
             section_edges.push_back(0);
-            //for (auto it = nodes.begin(); it != nodes.end(); ++it) {
-                //section_edges.push_back(mpreal(*it));
-            //}
             for (int i = 0; i < nodes.size(); ++i) {
                 section_edges.push_back(mpreal(nodes[i]));
             }
@@ -400,15 +397,14 @@ namespace irlib {
             return section_edges_new;
         };
 
-        //std::vector<mpreal> section_edges_x = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
-        //std::vector<mpreal> section_edges_y = linspace<mpreal>(mpreal(0.0), mpreal(1.0), 4);
-
         std::vector<mpreal> section_edges_x = gen_section_edges(nodes_x);
         std::vector<mpreal> section_edges_y = gen_section_edges(nodes_y);
 
         int ite = 0;
 
+        // Sections are split recursively until convergence is reached.
         while(true) {
+            //std::cout << "ite " << ite <<  " " << section_edges_x.size() + section_edges_y.size() << std::endl;
             std::vector<double> residual_x, residual_y;
             auto r = generate_ir_basis_functions_impl(kernel, max_dim, sv_cutoff, Nl, num_nodes_gauss_legendre,
                                                     section_edges_x,
