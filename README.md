@@ -40,9 +40,9 @@ $ cmake \
     path_to_source_file_directory
 $ make && make install
 
-C++ header files will be installed to CMAKE\_INSTALL\_PREFIX.
+C++ header files will be installed to CMAKE_INSTALL_PREFIX.
 By default, the Python modules will be installed into a per user site-packages directory.
-If you want the modules to be installed into a system site-packages directory, please set INSTALL\_INTO\_USER\_SITE\_PACKAGES\_DIRECTORY=OFF.
+If you want the modules to be installed into a system site-packages directory, please set INSTALL_INTO_USER_SITE_PACKAGES_DIRECTORY=OFF.
 
 
 ```
