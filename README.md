@@ -33,12 +33,18 @@ $ cmake \
     -DPYTHON_INCLUDE_DIR=/opt/local/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7 \
     -DPYTHON_LIBRARY=/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib \
     -DCMAKE_CXX_FLAGS="-std=c++11" \
-    -DCMAKE_INSTALL_PREFIX=/opt/irlib \
+    -DCMAKE_INSTALL_PREFIX=$HOME/local/irlib \
     -DTesting=ON \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_VERBOSE_MAKEFILE=ON \
     path_to_source_file_directory
-$ make && sudo make install
+$ make && make install
+
+C++ header files will be installed to CMAKE\_INSTALL\_PREFIX.
+By default, the Python modules will be installed into a per user site-packages directory.
+If you want the modules to be installed into a system site-packages directory, please set INSTALL\_INTO\_USER\_SITE\_PACKAGES\_DIRECTORY=OFF.
+
+
 ```
 
 ## Examples

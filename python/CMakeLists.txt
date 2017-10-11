@@ -37,7 +37,14 @@ include_directories(
         ${NUMPY_INCLUDE_DIRS}
 )
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from __future__ import print_function; from distutils.sysconfig import get_python_lib; print(get_python_lib())" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+option(INSTALL_INTO_USER_SITE_PACKAGES_DIRECTORY "Install python modules into a per user site-packages directory" ON)
+
+if (INSTALL_INTO_USER_SITE_PACKAGES_DIRECTORY)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE}  -m site --user-site OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from __future__ import print_function; from distutils.sysconfig import get_python_lib; print(get_python_lib())" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+message(STATUS "Python modules will be installed into" ${PYTHON_SITE_PACKAGES} ".")
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/irlib)
 
