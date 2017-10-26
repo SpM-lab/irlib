@@ -12,10 +12,24 @@ print("""
 #pragma once
 
 #include <vector>
+#include <string>
 #include <utility>
 
 namespace irlib {
 namespace detail {
+
+template<typename S>
+S stoscalar(const std::string& s);
+
+template<>
+double stoscalar<double>(const std::string& s) {
+   return std::stof(s);
+}
+
+template<>
+mpfr::mpreal stoscalar<mpfr::mpreal>(const std::string& s) {
+   return mpfr::mpreal(s);
+}
 
 template<typename T>
 std::vector<std::pair<T,T>>
@@ -38,7 +52,7 @@ for degree in range(2,7):
 
     for i in range(len(gl)):
         print(
-"        nodes[%d] = std::make_pair<T>(T(\"%s\"), T(\"%s\"));"%(i, gl[i][0], gl[i][1])
+"        nodes[%d] = std::make_pair<T>(stoscalar<T>(\"%s\"), stoscalar<T>(\"%s\"));"%(i, gl[i][0], gl[i][1])
 );
 
     print("""

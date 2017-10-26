@@ -13,7 +13,7 @@ using namespace irlib;
 
 TEST(mpmath, SVD) {
 
-    ir_set_default_prec(167);
+    ir_set_default_prec<mpreal>(167);
 
     //mpreal x{1};
     //test<mpreal>(x, x);
@@ -38,7 +38,7 @@ TEST(mpmath, SVD) {
 }
 
 TEST(mpmath, gauss_legenre) {
-    ir_set_default_prec(167);
+    ir_set_default_prec<mpreal>(167);
 
     //Integrate x**2 over [-1, 1]
     for (int degree : std::vector<int>{6, 12, 24}) {
@@ -53,7 +53,7 @@ TEST(mpmath, gauss_legenre) {
 }
 
 TEST(mpmath, legendre_polynomials) {
-    ir_set_default_prec(167);
+    ir_set_default_prec<mpreal>(167);
 
     int Nl = 100;
 
@@ -75,7 +75,7 @@ TEST(mpmath, legendre_polynomials) {
 
 
 TEST(mpmath, normalized_legendre_polynomials_derivatives) {
-    ir_set_default_prec(167);
+    ir_set_default_prec<mpreal>(167);
 
     int Nl = 3;
     mpreal x(1);

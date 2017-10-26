@@ -18,6 +18,8 @@
 #include "detail/aux.hpp"
 
 namespace irlib {
+    //extern void * enabler ;
+
 /**
  * Class for kernel Ir basis
  */
@@ -80,7 +82,9 @@ namespace irlib {
          * @param x  x on [-1,1]
          * @return   The value of u_l(x)
          */
-        double ulx(int l, const MPREAL& x) const throw(std::runtime_error) {
+        template<typename U = MPREAL>
+        typename std::enable_if<!std::is_floating_point<U>::value, double>::type
+        ulx(int l, const MPREAL& x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -99,7 +103,9 @@ namespace irlib {
          * @param y  y on [-1,1]
          * @return   The value of v_l(y)
          */
-        double vly(int l, const MPREAL& y) const throw(std::runtime_error) {
+        template<typename U = MPREAL>
+        typename std::enable_if<!std::is_floating_point<U>::value, double>::type
+        vly(int l, const MPREAL& y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -197,6 +203,7 @@ namespace irlib {
 
 #ifdef SWIG
 %template(mpreal_basis_set) basis_set<irlib::mpreal>;
+%template(double_basis_set) basis_set<double>;
 #endif
 
     /**
@@ -208,6 +215,12 @@ namespace irlib {
                 : basis_set(fermionic_kernel<irlib::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 
+    class basis_f_dp : public basis_set<double> {
+    public:
+        basis_f_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-6, int n_local_poly=10) throw(std::runtime_error)
+                : basis_set(fermionic_kernel<double>(Lambda), max_dim, cutoff, n_local_poly) {}
+    };
+
     /**
      * Bosonic IR basis
      */
@@ -215,5 +228,11 @@ namespace irlib {
     public:
         basis_b(double Lambda, int max_dim = 10000, double cutoff = 1e-12, int n_local_poly=10) throw(std::runtime_error)
                 : basis_set(bosonic_kernel<irlib::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
+    };
+
+    class basis_b_dp : public basis_set<double> {
+    public:
+        basis_b_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-6, int n_local_poly=10) throw(std::runtime_error)
+                : basis_set(bosonic_kernel<double>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 }

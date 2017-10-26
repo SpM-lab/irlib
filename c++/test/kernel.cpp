@@ -21,7 +21,7 @@ TEST(kernel, composite_gauss_legendre_integration) {
     int num_sec = 10;
     int num_local_nodes = 12;
 
-    ir_set_default_prec(167);
+    ir_set_default_prec<mpreal>(167);
 
     auto local_nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
     auto section_edges_x = linspace<mpreal>(-1, 1, num_sec+1);
@@ -40,7 +40,7 @@ TEST(kernel, matrixrep) {
     typedef Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
 
     int deci_deg = 50;
-    ir_set_default_prec(ir_digits2bits(deci_deg));
+    ir_set_default_prec<mpreal>(ir_digits2bits(deci_deg));
 
     int num_sec = 1;
     int Nl = 6;
@@ -49,8 +49,8 @@ TEST(kernel, matrixrep) {
     std::vector<mpreal> section_edges_x = linspace<mpreal>(-1, 1, num_sec+1);
     std::vector<mpreal> section_edges_y = linspace<mpreal>(-1, 1, num_sec+1);
 
-    auto const_kernel = [](const mpreal& x, const mpreal& y) {return 1.0;};
-    auto Kmat = matrix_rep(const_kernel, section_edges_x, section_edges_y, gauss_legendre_deg, Nl);
+    auto const_kernel = [](const mpreal& x, const mpreal& y) {return mpreal(1.0);};
+    auto Kmat = matrix_rep<mpreal>(const_kernel, section_edges_x, section_edges_y, gauss_legendre_deg, Nl);
 
     ASSERT_TRUE(abs(Kmat(0,0) - mpreal(2)) < 1e-30);
     ASSERT_TRUE(abs(Kmat(1,1)) < 1e-30);
@@ -60,7 +60,7 @@ TEST(kernel, SVD) {
     typedef Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic>  MatrixXmp;
 
     int deci_deg = 30;
-    ir_set_default_prec(ir_digits2bits(deci_deg));
+    ir_set_default_prec<mpreal>(ir_digits2bits(deci_deg));
 
     int num_sec = 20;
     int Nl = 6;
@@ -135,7 +135,7 @@ TEST(kernel, transformation_to_matsubara) {
 }
 
 TEST(kernel, basis_functions) {
-    ir_set_default_prec(169);
+    ir_set_default_prec<mpreal>(169);
 
     double Lambda = 100.0;
     int max_dim = 30;
