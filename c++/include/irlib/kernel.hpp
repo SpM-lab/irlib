@@ -451,7 +451,7 @@ namespace irlib {
 
         // Increase default precision if needed
         {
-            int min_prec = std::max(static_cast<int>(3.33333 * (std::log10(1 / sv_cutoff) + 15)), 100);
+            auto min_prec = std::max(ir_digits2bits(std::log10(1 / sv_cutoff) + 15), long(100));
             if (min_prec > ir_get_default_prec<ScalarType>()) {
                 ir_set_default_prec<ScalarType>(min_prec);
             }

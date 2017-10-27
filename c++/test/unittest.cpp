@@ -127,71 +127,61 @@ TYPED_TEST(HighTTest, BasisTypes) {
         sign *= -1;
       }
     }
-
-    //check transformation matrix to Matsubara frequencies
-     /*
-    if (basis.get_statistics() == irlib::statistics::FERMIONIC) {
-
-      const int N_iw = 3;
-      //time_t t1, t2;
-
-      Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic> Tnl_legendre(N_iw, 3);
-
-      compute_Tnl_legendre(N_iw, 3, Tnl_legendre);
-
-      //Fast version
-      std::vector<long> n_vec;
-      for (int n=0; n<N_iw; ++n) {
-          n_vec.push_back(n);
-      }
-      auto Tnl_ir = basis.compute_Tnl(n_vec);
-      for (int n = 0; n < N_iw; n++) {
-        for (int l = 0; l < 3; ++l) {
-          ASSERT_NEAR(std::abs(Tnl_ir(n,l) / (Tnl_legendre(n, l)) - 1.0), 0.0, 1e-5);
-        }
-      }
-    }
-     */
   } catch (const std::exception& e) {
     FAIL() << e.what();
   }
 }
 
-TEST(IrBasis, FermionInsulatingGtau) {
+template<class T>
+class ExpansionByFermionBasis : public testing::Test {
+};
+
+//typedef ::testing::Types<irlib::basis_f, irlib::basis_f_dp> FermionBasisTypes;
+typedef ::testing::Types<irlib::basis_f_dp> FermionBasisTypes;
+
+TYPED_TEST_CASE(ExpansionByFermionBasis, FermionBasisTypes);
+
+TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
+  using scalar_type = typename TypeParam::scalar_type;
+
   try {
     const double Lambda = 300.0, beta = 100.0;
     const int max_dim = 100;
-    irlib::basis_f basis(Lambda, max_dim, 1e-14);
+    TypeParam  basis(Lambda, max_dim);
     ASSERT_TRUE(basis.dim()>0);
 
-    typedef irlib::piecewise_polynomial<double,mpreal> pp_type;
+    double tol = 100*basis.sl(basis.dim()-1)/basis.sl(0);
+
+    typedef irlib::piecewise_polynomial<double,scalar_type> pp_type;
 
     const int nptr = basis.ul(0).num_sections() + 1;
-    std::vector<mpreal> x(nptr);
+    std::vector<scalar_type> x(nptr);
     for (int i = 0; i < nptr; ++i) {
       x[i] = basis.ul(0).section_edge(i);
     }
 
-    auto gtau = [&](const mpreal& x) {return std::exp(-0.5*beta)*cosh(-0.5*beta*x);};
-    auto section_edges = irlib::linspace<mpreal>(-1, 1, 500);
+    auto gtau = [&](const scalar_type& x) {return std::exp(-0.5*beta)*cosh(-0.5*beta*x);};
+    auto section_edges = irlib::linspace<scalar_type>(-1, 1, 500);
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
-      auto f = [&](const mpreal& x) {return mpreal(gtau(x) * basis.ulx(l,x));};
-      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<mpreal,mpreal>(section_edges, f, 12) * beta / std::sqrt(2.0));
+      auto f = [&](const scalar_type& x) {return scalar_type(gtau(x) * basis.ulx_mp(l,x));};
+      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<scalar_type,scalar_type>(section_edges, f, 12) * beta / std::sqrt(2.0));
     }
 
     std::vector<double> y_r(nptr, 0.0);
     for (int l = 0; l < basis.dim(); ++l) {
       for (int i = 0; i < nptr; ++i) {
-        y_r[i] += coeff[l] * (std::sqrt(2.0)/beta) * basis.ulx(l,x[i]);
+        y_r[i] += coeff[l] * (std::sqrt(2.0)/beta) * basis.ulx_mp(l,x[i]);
       }
     }
 
     double max_diff = 0.0;
     for (int i = 0; i < nptr; ++i) {
-      max_diff = static_cast<double>(max(abs(gtau(x[i])-y_r[i]), max_diff));
-      ASSERT_TRUE(abs(gtau(x[i])-y_r[i]) < 1e-8);
+      max_diff = std::max(
+                      std::abs(static_cast<double>(gtau(x[i])-y_r[i])),
+                      max_diff);
+      ASSERT_NEAR(gtau(x[i]), y_r[i], tol);
     }
 
     //to matsubara freq.
@@ -212,7 +202,8 @@ TEST(IrBasis, FermionInsulatingGtau) {
     for (int n = 0; n < n_iw; ++n) {
       double wn = (2.*n+1)*M_PI/beta;
       std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
-      ASSERT_NEAR(std::abs(z-coeff_iw(n)), 0.0, 1e-9);
+      ASSERT_NEAR(z.real(), coeff_iw(n).real(), tol);
+      ASSERT_NEAR(z.imag(), coeff_iw(n).imag(), tol);
     }
 
 

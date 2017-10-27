@@ -26,6 +26,8 @@ namespace irlib {
  template<typename MPREAL>
     class basis_set {
     public:
+        using scalar_type = MPREAL;
+
         /**
          * Constructor
          * @param knl  kernel
@@ -64,7 +66,9 @@ namespace irlib {
          * @return   The value of u_l(x)
          */
         double ulx(int l, double x) const throw(std::runtime_error) {
-            return ulx(l, MPREAL(x));
+            assert(x >= -1 && x <= 1);
+            assert(l >= 0 && l < dim());
+            return ulx_mp(l, MPREAL(x));
         }
 
         /**
@@ -73,7 +77,9 @@ namespace irlib {
          * @return   The value of v_l(y)
          */
         double vly(int l, double y) const throw(std::runtime_error) {
-            return vly(l, MPREAL(y));
+            assert(y >= -1 && y <= 1);
+            assert(l >= 0 && l < dim());
+            return vly_mp(l, MPREAL(y));
         }
 
         /**
@@ -82,9 +88,9 @@ namespace irlib {
          * @param x  x on [-1,1]
          * @return   The value of u_l(x)
          */
-        template<typename U = MPREAL>
-        typename std::enable_if<!std::is_floating_point<U>::value, double>::type
-        ulx(int l, const MPREAL& x) const throw(std::runtime_error) {
+        //template<typename U = MPREAL>
+        //typename std::enable_if<!std::is_floating_point<U>::value, double>::type
+        double ulx_mp(int l, const MPREAL& x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -103,9 +109,9 @@ namespace irlib {
          * @param y  y on [-1,1]
          * @return   The value of v_l(y)
          */
-        template<typename U = MPREAL>
-        typename std::enable_if<!std::is_floating_point<U>::value, double>::type
-        vly(int l, const MPREAL& y) const throw(std::runtime_error) {
+        //template<typename U = MPREAL>
+        //typename std::enable_if<!std::is_floating_point<U>::value, double>::type
+        double vly_mp(int l, const MPREAL& y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -133,11 +139,6 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return v_basis_[l];
         }
-
-        /**
-         * Return a reference to all basis functions
-         */
-        //const std::vector<piecewise_polynomial<double> > all() const { return u_basis_; }
 
         /**
          * Return number of basis functions
@@ -217,7 +218,7 @@ namespace irlib {
 
     class basis_f_dp : public basis_set<double> {
     public:
-        basis_f_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-6, int n_local_poly=10) throw(std::runtime_error)
+        basis_f_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-8, int n_local_poly=10) throw(std::runtime_error)
                 : basis_set(fermionic_kernel<double>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 
@@ -232,7 +233,7 @@ namespace irlib {
 
     class basis_b_dp : public basis_set<double> {
     public:
-        basis_b_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-6, int n_local_poly=10) throw(std::runtime_error)
+        basis_b_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-8, int n_local_poly=10) throw(std::runtime_error)
                 : basis_set(bosonic_kernel<double>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 }

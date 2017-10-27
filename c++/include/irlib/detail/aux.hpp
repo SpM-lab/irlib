@@ -33,7 +33,7 @@ namespace irlib {
 
     template<typename Tx, typename Ty, typename F>
     Ty integrate_gauss_legendre(const std::vector<Tx>& section_edges, const F& f, int num_local_nodes) {
-        std::vector<std::pair<mpreal, mpreal >> nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
+        std::vector<std::pair<Tx, Tx>> nodes = detail::gauss_legendre_nodes<Tx>(num_local_nodes);
         auto nodes_x = composite_gauss_legendre_nodes(section_edges, nodes);
         Ty r = 0;
         for (int n=0; n<nodes_x.size(); ++n) {

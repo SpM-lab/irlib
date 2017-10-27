@@ -64,9 +64,10 @@ namespace irlib {
 
     template<>
     void ir_set_default_prec<double>(mp_prec_t prec) {
-        if (prec > 64) {
-            throw std::runtime_error("Required an accuracy of more than 64 bits for double!");
-        }
+        // do nothing
+        //if (prec > 64) {
+            //throw std::runtime_error("Required an accuracy of more than 64 bits for double!");
+        //}
     }
 
     template<>
