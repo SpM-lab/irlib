@@ -136,8 +136,9 @@ template<class T>
 class ExpansionByFermionBasis : public testing::Test {
 };
 
+typedef ::testing::Types<irlib::basis_f> FermionBasisTypes;
 //typedef ::testing::Types<irlib::basis_f, irlib::basis_f_dp> FermionBasisTypes;
-typedef ::testing::Types<irlib::basis_f_dp> FermionBasisTypes;
+//typedef ::testing::Types<irlib::basis_f_dp> FermionBasisTypes;
 
 TYPED_TEST_CASE(ExpansionByFermionBasis, FermionBasisTypes);
 
@@ -150,7 +151,7 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
     TypeParam  basis(Lambda, max_dim);
     ASSERT_TRUE(basis.dim()>0);
 
-    double tol = 100*basis.sl(basis.dim()-1)/basis.sl(0);
+    double tol = 1000*basis.sl(basis.dim()-1)/basis.sl(0);
 
     typedef irlib::piecewise_polynomial<double,scalar_type> pp_type;
 
@@ -181,8 +182,8 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
       max_diff = std::max(
                       std::abs(static_cast<double>(gtau(x[i])-y_r[i])),
                       max_diff);
-      ASSERT_NEAR(gtau(x[i]), y_r[i], tol);
     }
+    ASSERT_NEAR(max_diff, 0.0, tol);
 
     //to matsubara freq.
     const int n_iw = 1000;
@@ -202,6 +203,7 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
     for (int n = 0; n < n_iw; ++n) {
       double wn = (2.*n+1)*M_PI/beta;
       std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
+        //std::cout << " n " << n << " " << z.imag() << " " << coeff_iw(n).imag() << " " << z.imag() - coeff_iw(n).imag() << std::endl;
       ASSERT_NEAR(z.real(), coeff_iw(n).real(), tol);
       ASSERT_NEAR(z.imag(), coeff_iw(n).imag(), tol);
     }

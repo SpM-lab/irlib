@@ -216,11 +216,13 @@ namespace irlib {
                 : basis_set(fermionic_kernel<irlib::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 
+    /*
     class basis_f_dp : public basis_set<double> {
     public:
         basis_f_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-8, int n_local_poly=10) throw(std::runtime_error)
                 : basis_set(fermionic_kernel<double>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
+     */
 
     /**
      * Bosonic IR basis
@@ -231,9 +233,11 @@ namespace irlib {
                 : basis_set(bosonic_kernel<irlib::mpreal>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
 
+    /*
     class basis_b_dp : public basis_set<double> {
     public:
         basis_b_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-8, int n_local_poly=10) throw(std::runtime_error)
                 : basis_set(bosonic_kernel<double>(Lambda), max_dim, cutoff, n_local_poly) {}
     };
+    */
 }
