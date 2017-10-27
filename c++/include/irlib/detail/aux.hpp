@@ -326,7 +326,7 @@ namespace irlib {
     void compute_transformation_matrix_to_matsubara(
             const std::vector<long> &n_vec,
             irlib::statistics::statistics_type statis,
-            const std::vector<piecewise_polynomial<T,Tx>> &bf_src,
+            const std::vector<piecewise_polynomial<T,Tx> > &bf_src,
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
         typedef std::complex<double> dcomplex;
@@ -368,6 +368,8 @@ namespace irlib {
                 Tnl(i,j) = Tnl_low_freq(i,j);
             }
         }
+
+        // compute tails
 
 
         int sign_s = (statis == statistics::FERMIONIC ? 1 : -1);

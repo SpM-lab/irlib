@@ -40,11 +40,10 @@ namespace irlib {
     using mpfr::sinh;
 
     namespace detail {
-        template<typename S> S sqrt(const S& s);
-        template<> double sqrt<double>(const double& s) {return std::sqrt(s);};
-        template<> mpfr::mpreal sqrt<mpreal>(const mpreal& s) {return mpfr::sqrt(s);};
+        template<typename S> inline S sqrt(const S& s);
+        template<> inline double sqrt<double>(const double& s) {return std::sqrt(s);};
+        template<> inline mpfr::mpreal sqrt<mpreal>(const mpreal& s) {return mpfr::sqrt(s);};
     }
-
 
     using pp_type = piecewise_polynomial<double,mpreal>;
 
@@ -52,31 +51,28 @@ namespace irlib {
     using MatrixXc = Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>;
 
     template<typename ScalarType>
-    void ir_set_default_prec(mp_prec_t prec);
+    inline void ir_set_default_prec(mp_prec_t prec);
 
     template<typename ScalarType>
-    mp_prec_t ir_get_default_prec();
+    inline mp_prec_t ir_get_default_prec();
 
     template<>
-    void ir_set_default_prec<mpfr::mpreal>(mp_prec_t prec) {
+    inline
+    void
+    ir_set_default_prec<mpfr::mpreal>(mp_prec_t prec) {
         mpfr::mpreal::set_default_prec(prec);
     }
 
     template<>
-    void ir_set_default_prec<double>(mp_prec_t prec) {
-        // do nothing
-        //if (prec > 64) {
-            //throw std::runtime_error("Required an accuracy of more than 64 bits for double!");
-        //}
-    }
+    inline void ir_set_default_prec<double>(mp_prec_t prec) {}
 
     template<>
-    mp_prec_t ir_get_default_prec<mpfr::mpreal>() {
+    inline mp_prec_t ir_get_default_prec<mpfr::mpreal>() {
         return mpfr::mpreal::get_default_prec();
     }
 
     template<>
-    mp_prec_t ir_get_default_prec<double>() {
+    inline mp_prec_t ir_get_default_prec<double>() {
         return 64;
     }
 
