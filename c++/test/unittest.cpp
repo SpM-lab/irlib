@@ -1,4 +1,4 @@
-#include "unittest.hpp"
+#include "common.hpp"
 
 #include <fstream>
 
@@ -145,13 +145,17 @@ TYPED_TEST_CASE(ExpansionByFermionBasis, FermionBasisTypes);
 TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
   using scalar_type = typename TypeParam::scalar_type;
 
-  try {
-    const double Lambda = 300.0, beta = 100.0;
-    const int max_dim = 100;
-    TypeParam  basis(Lambda, max_dim);
+  for (auto beta : std::vector<double>{100.0, 10000.0}) {
+    double Lambda = 3*beta;
+    int max_dim = 10000;
+      //std::cout << "constructing " << std::endl;
+    TypeParam  basis(Lambda, max_dim, 1e-8);
+      //std::cout << "done " << std::endl;
     ASSERT_TRUE(basis.dim()>0);
+      //std::cout << " beta " << beta << " " << basis.dim() << std::endl;
 
-    double tol = 1000*basis.sl(basis.dim()-1)/basis.sl(0);
+    //double tol = 1000*basis.sl(basis.dim()-1)/basis.sl(0);
+    double tol = 1e-6;
 
     typedef irlib::piecewise_polynomial<double,scalar_type> pp_type;
 
@@ -161,8 +165,18 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
       x[i] = basis.ul(0).section_edge(i);
     }
 
-    auto gtau = [&](const scalar_type& x) {return std::exp(-0.5*beta)*cosh(-0.5*beta*x);};
-    auto section_edges = irlib::linspace<scalar_type>(-1, 1, 500);
+    auto gtau = [&](const scalar_type& x) {return exp(-0.5*scalar_type(beta))*cosh(-0.5*beta*x);};
+
+    std::vector<scalar_type> section_edges;
+    for (int s=0; s<basis.ul(0).num_sections()+1; ++s) {
+        section_edges.push_back(-basis.ul(0).section_edge(
+                basis.ul(0).num_sections()-s
+        ));
+    }
+    for (int s=0; s<basis.ul(0).num_sections()+1; ++s) {
+        section_edges.push_back(basis.ul(0).section_edge(s));
+    }
+    //auto section_edges = irlib::linspace<scalar_type>(-1, 1, 50000);
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
@@ -179,6 +193,7 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
 
     double max_diff = 0.0;
     for (int i = 0; i < nptr; ++i) {
+        //std::cout << x[i] << " " << gtau(x[i]) << " " << y_r[i] << " " << gtau(x[i])-y_r[i] << std::endl;
       max_diff = std::max(
                       std::abs(static_cast<double>(gtau(x[i])-y_r[i])),
                       max_diff);
@@ -186,12 +201,15 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
     ASSERT_NEAR(max_diff, 0.0, tol);
 
     //to matsubara freq.
-    const int n_iw = 1000;
-    MatrixXc Tnl(n_iw, basis.dim());
     std::vector<long> n_vec;
-    for (int n=0; n<n_iw; ++n) {
+    for (int n=0; n<1000; ++n) {
         n_vec.push_back(n);
     }
+    //some higher frequencies
+    n_vec.push_back(1000000);
+    n_vec.push_back(100000000);
+    int n_iw = n_vec.size();
+    MatrixXc Tnl(n_iw, basis.dim());
     auto Tnl_tensor = basis.compute_Tnl(n_vec);
     MatrixXc coeff_vec(basis.dim(),1);
     for (int l = 0; l < basis.dim(); ++l) {
@@ -201,16 +219,12 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
 
     const std::complex<double> zi(0.0, 1.0);
     for (int n = 0; n < n_iw; ++n) {
-      double wn = (2.*n+1)*M_PI/beta;
+      double wn = (2.*n_vec[n]+1)*M_PI/beta;
       std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
-        //std::cout << " n " << n << " " << z.imag() << " " << coeff_iw(n).imag() << " " << z.imag() - coeff_iw(n).imag() << std::endl;
       ASSERT_NEAR(z.real(), coeff_iw(n).real(), tol);
       ASSERT_NEAR(z.imag(), coeff_iw(n).imag(), tol);
     }
 
-
-  } catch (const std::exception& e) {
-    FAIL() << e.what();
   }
 }
 

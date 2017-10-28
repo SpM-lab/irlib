@@ -386,7 +386,7 @@ namespace irlib {
     };//class pieacewise_polynomial
 
 #ifdef SWIG
-    %template(piecewise_polynomial) piecewise_polynomial<double,MPREAL>;
+    %template(piecewise_polynomial) piecewise_polynomial<double,mpfr::mpreal>;
 #endif
 
 /// Add piecewise_polynomial objects

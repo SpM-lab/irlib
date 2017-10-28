@@ -45,7 +45,7 @@ using namespace irlib;
 %feature("autodoc", "Do not call") alps::gf::index_mesh::compute_points;
  */
 
-
+%include <irlib/basis_impl.hpp>
 %include <irlib/basis.hpp>
 
 /* %template(real_piecewise_polynomial) alps::gf::piecewise_polynomial<double>; */

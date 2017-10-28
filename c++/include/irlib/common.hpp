@@ -10,13 +10,6 @@
 #include "detail/legendre_polynomials.hpp"
 
 namespace irlib {
-    namespace statistics {
-        enum statistics_type {
-            BOSONIC = 0,
-            FERMIONIC = 1
-        };
-    }
-
     inline bool python_runtime_check(bool b, const std::string& message) {
 #ifdef SWIGPYTHON
         if (!b) {
@@ -24,6 +17,13 @@ namespace irlib {
         }
 #endif
         return b;
+    }
+
+    namespace statistics {
+        enum statistics_type {
+            BOSONIC = 0,
+            FERMIONIC = 1
+        };
     }
 
     using std::abs;

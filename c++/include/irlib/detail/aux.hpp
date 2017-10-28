@@ -334,7 +334,7 @@ namespace irlib {
         typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
         typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
-        long n_limit = 500;
+        int Nl = bf_src.size();
 
         if (n_vec.size() == 0) {
             return;
@@ -350,41 +350,64 @@ namespace irlib {
             throw std::runtime_error("n_vec cannot be negative!");
         }
 
-        std::vector<long> ovec;
         long offset = (statis == statistics::FERMIONIC ? 1 : 0);
-        for (auto n : n_vec) {
-            if (n < n_limit) {
-                ovec.push_back(2*n+offset);
-            }
-        }
-
-        Eigen::Tensor<std::complex<double>, 2> Tnl_low_freq;
-        compute_Tbar_ol(ovec, bf_src, Tnl_low_freq);
-
-        Tnl = Eigen::Tensor<std::complex<double>,2>(n_vec.size(), bf_src.size());
-        Tnl.setZero();
-        for(int j=0; j<Tnl_low_freq.dimension(1); ++j) {
-            for(int i=0; i<Tnl_low_freq.dimension(0); ++i) {
-                Tnl(i,j) = Tnl_low_freq(i,j);
-            }
-        }
+        int sign_s = (statis == statistics::FERMIONIC ? 1 : -1);
 
         // compute tails
-
-
-        int sign_s = (statis == statistics::FERMIONIC ? 1 : -1);
+        int num_tail = 2*(bf_src[0].order()/2) ;//this is an even number
+        MatrixXc tails(bf_src.size(), num_tail);
         for (int l=0; l<bf_src.size(); ++l) {
-            for (int m=0; m<bf_src[l].order(); ++m) {
+            for (int m=0; m<num_tail; ++m) {
                 int sign_m1 = (l+m)%2==0 ? 1 : -1;
                 if (sign_s == sign_m1) {
                     double am = std::sqrt(2.0) * std::pow(2, m) * (sign_s + sign_m1) * bf_src[l].derivative(1, m);
-                    for (int i=ovec.size(); i<n_vec.size(); ++i) {
-                        double wn = (2*n_vec[i]+offset) * M_PI;
-                        Tnl(i, l) += am/std::pow(std::complex<double>(0.0, -wn), m+1);
-                    }
+                    tails(l,m) = am/std::pow(std::complex<double>(0.0, -1), m+1);
+                } else {
+                    tails(l,m) = 0.0;
                 }
             }
         }
+
+        // Determine for which Matsubara frequencies tail is used
+        // Store those indices in ovec
+        std::vector<int> num_low_freq(Nl);
+        double eps = 1e-8;
+        for (int l=0; l<Nl; ++l) {
+            int m_low = l%2==0 ?  0 : 1;
+            int m_high = l%2==0 ?  num_tail-2 : num_tail-1;
+            double wn_limit = std::pow(eps * std::abs(tails(l,m_low)/tails(l,m_high)), 1.0/(m_low-m_high) );
+            double n_limit = 0.5*(wn_limit/M_PI-offset);
+
+            num_low_freq[l] = std::count_if(n_vec.begin(), n_vec.end(), [&](long n){return n < n_limit;});
+        }
+        auto max_num_low_freq = *std::max_element(num_low_freq.begin(), num_low_freq.end());
+        auto last = n_vec.begin();
+        std::advance(last, max_num_low_freq);
+        std::vector<long> ovec;
+        std::transform(n_vec.begin(), last, std::back_inserter(ovec), [&](long n){return 2*n+offset;});
+
+        // Compute Tnl
+        Eigen::Tensor<std::complex<double>, 2> Tnl_low_freq;
+        compute_Tbar_ol(ovec, bf_src, Tnl_low_freq);
+        Tnl = Eigen::Tensor<std::complex<double>,2>(n_vec.size(), bf_src.size());
+        Tnl.setZero();
+        for(int l=0; l<Nl; ++l) {
+            for(int i=0; i<max_num_low_freq; ++i) {
+                Tnl(i,l) = Tnl_low_freq(i,l);
+            }
+        }
+
+        // Relace with tail
+        for (int l=0; l<Nl; ++l) {
+            for (int i=num_low_freq[l]; i<n_vec.size(); ++i) {
+                double wn = (2*n_vec[i]+offset) * M_PI;
+                Tnl(i, l) = 0.0;
+                for (int m=0; m<num_tail; ++m) {
+                    Tnl(i, l) += tails(l,m)/std::pow(wn, m+1);
+                }
+            }
+        }
+
     }
 
     /**

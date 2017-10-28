@@ -1,4 +1,4 @@
 #include <irlib/basis.hpp>
+#include <irlib/basis_impl.hpp>
 
-//template class irlib::basis_set<irlib::mpreal>;
-//template class irlib::piecewise_polynomial<double,mpfr::mpreal>;
+// To detect functions which are forgot to be inlined
