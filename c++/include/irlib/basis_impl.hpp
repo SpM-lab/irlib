@@ -40,10 +40,10 @@ namespace irlib {
             statistics_ = s;
             if (s == statistics::FERMIONIC) {
                 std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions(
-                        fermionic_kernel<mpreal>(Lambda), max_dim, cutoff, n_local_poly);
+                        fermionic_kernel<scalar_type>(Lambda), max_dim, cutoff, n_local_poly);
             } else if (s == statistics::BOSONIC) {
                 std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions(
-                        bosonic_kernel<mpreal>(Lambda), max_dim, cutoff, n_local_poly);
+                        bosonic_kernel<scalar_type>(Lambda), max_dim, cutoff, n_local_poly);
             }
             assert(u_basis_.size()>0);
             assert(u_basis_[0].num_sections()>0);
@@ -211,6 +211,7 @@ namespace irlib {
 
 #ifdef SWIG
 %template(mpreal_basis_impl) basis_impl<mpfr::mpreal>;
+%template(mpreal_basis_dp_impl) basis_impl<double>;
 #endif
 
 }

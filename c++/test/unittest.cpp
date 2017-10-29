@@ -132,13 +132,34 @@ TYPED_TEST(HighTTest, BasisTypes) {
   }
 }
 
+TEST(ComparisonMPvsDP, Fermion) {
+    double Lambda = 1000.0;
+    int max_dim = 10000;
+    irlib::basis_f basis_mp(Lambda, max_dim, 1e-6);
+    irlib::basis_f_dp basis_dp(Lambda, max_dim, 1e-6);
+    double tol = 1e-5;
+
+    int Nl = std::min(basis_mp.dim(), basis_dp.dim());
+
+    for (int s=0; s<basis_mp.ul(0).num_sections(); ++s) {
+        auto s0 = basis_dp.ul(0).section_edge(s);
+        auto s1 = basis_dp.ul(0).section_edge(s+1);
+        auto xs = irlib::linspace<double>(s0, s1, 10);
+        for (auto x : xs) {
+            for (int l=0; l<Nl; ++l) {
+                ASSERT_NEAR(basis_dp.ulx(l,x), basis_mp.ulx(l,x), std::max(tol, tol * std::abs(basis_dp.ulx(l,x))));
+            }
+        }
+    }
+}
+
 template<class T>
 class ExpansionByFermionBasis : public testing::Test {
 };
 
-typedef ::testing::Types<irlib::basis_f> FermionBasisTypes;
+//typedef ::testing::Types<irlib::basis_f> FermionBasisTypes;
 //typedef ::testing::Types<irlib::basis_f, irlib::basis_f_dp> FermionBasisTypes;
-//typedef ::testing::Types<irlib::basis_f_dp> FermionBasisTypes;
+typedef ::testing::Types<irlib::basis_f_dp> FermionBasisTypes;
 
 TYPED_TEST_CASE(ExpansionByFermionBasis, FermionBasisTypes);
 
@@ -155,7 +176,7 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
       //std::cout << " beta " << beta << " " << basis.dim() << std::endl;
 
     //double tol = 1000*basis.sl(basis.dim()-1)/basis.sl(0);
-    double tol = 1e-6;
+    double tol = 1e-5;
 
     typedef irlib::piecewise_polynomial<double,scalar_type> pp_type;
 
@@ -165,7 +186,18 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
       x[i] = basis.ul(0).section_edge(i);
     }
 
-    auto gtau = [&](const scalar_type& x) {return exp(-0.5*scalar_type(beta))*cosh(-0.5*beta*x);};
+    auto gtau = [&](const scalar_type& x) {
+        if (-.5*beta*x > 100.0) {
+            return 0.5 * exp(-0.5*beta*(1+x));
+        } else if (-.5*beta*x < -100.0) {
+            return 0.5 * exp(-0.5*beta*(1-x));
+        } else {
+            return exp(-0.5*beta)*cosh(-0.5*beta*x);
+        }
+
+        //return exp(-0.5*scalar_type(beta))*cosh(-0.5*beta*x);
+        //return exp(-0.5*scalar_type(beta))*cosh(-0.5*beta*x);
+    };
 
     std::vector<scalar_type> section_edges;
     for (int s=0; s<basis.ul(0).num_sections()+1; ++s) {
@@ -223,6 +255,7 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
       std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
       ASSERT_NEAR(z.real(), coeff_iw(n).real(), tol);
       ASSERT_NEAR(z.imag(), coeff_iw(n).imag(), tol);
+        //std::cout << " n " << n << " " << z.imag() << " " << z.imag() - coeff_iw(n).imag() << std::endl;
     }
 
   }
