@@ -23,10 +23,14 @@ namespace irlib {
  * Class for kernel Ir basis
  */
 
- template<typename MPREAL>
+ template<typename SVDFPType>
     class basis_impl {
     public:
-        using scalar_type = MPREAL;
+        // Floating-point type used for SVD
+        using svd_scalar_type = SVDFPType;
+
+        //The most accurate floating-point type
+        using accurate_fp_type = mpfr::mpreal;
 
         /**
          * Constructor
@@ -36,14 +40,24 @@ namespace irlib {
          * @param n_local_poly   Number of Legendre polynomials used to expand basis functions in each sector
          */
         basis_impl(statistics::statistics_type s, double Lambda, int max_dim, double cutoff, int n_local_poly) throw(std::runtime_error) {
-            //statistics_ = knl.get_statistics();
+            // Increase default precision if needed
+            {
+                auto min_prec = std::max(
+                        mpfr::digits2bits(std::log10(1/cutoff))+10,
+                        long(64)//At least 19 digits
+                );
+                if (min_prec > mpfr::mpreal::get_default_prec()) {
+                    mpfr::mpreal::set_default_prec(min_prec);
+                }
+            }
+
             statistics_ = s;
             if (s == statistics::FERMIONIC) {
-                std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions(
-                        fermionic_kernel<scalar_type>(Lambda), max_dim, cutoff, n_local_poly);
+                std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions<SVDFPType>(
+                        fermionic_kernel<SVDFPType>(Lambda), max_dim, cutoff, n_local_poly);
             } else if (s == statistics::BOSONIC) {
-                std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions(
-                        bosonic_kernel<scalar_type>(Lambda), max_dim, cutoff, n_local_poly);
+                std::tie(sv_, u_basis_, v_basis_) = generate_ir_basis_functions<SVDFPType>(
+                        bosonic_kernel<SVDFPType>(Lambda), max_dim, cutoff, n_local_poly);
             }
             assert(u_basis_.size()>0);
             assert(u_basis_[0].num_sections()>0);
@@ -53,7 +67,7 @@ namespace irlib {
         statistics::statistics_type statistics_;
         //singular values
         std::vector<double> sv_;
-        std::vector< piecewise_polynomial<double,MPREAL> > u_basis_, v_basis_;
+        std::vector< piecewise_polynomial<double,accurate_fp_type>> u_basis_, v_basis_;
 
     public:
         /**
@@ -75,7 +89,7 @@ namespace irlib {
         double ulx(int l, double x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
-            return ulx_mp(l, MPREAL(x));
+            return ulx_mp(l, SVDFPType(x));
         }
 
         /**
@@ -86,7 +100,7 @@ namespace irlib {
         double vly(int l, double y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
-            return vly_mp(l, MPREAL(y));
+            return vly_mp(l, SVDFPType(y));
         }
 
         /**
@@ -95,9 +109,7 @@ namespace irlib {
          * @param x  x on [-1,1]
          * @return   The value of u_l(x)
          */
-        //template<typename U = MPREAL>
-        //typename std::enable_if<!std::is_floating_point<U>::value, double>::type
-        double ulx_mp(int l, const MPREAL& x) const throw(std::runtime_error) {
+        double ulx_mp(int l, const accurate_fp_type& x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -116,9 +128,7 @@ namespace irlib {
          * @param y  y on [-1,1]
          * @return   The value of v_l(y)
          */
-        //template<typename U = MPREAL>
-        //typename std::enable_if<!std::is_floating_point<U>::value, double>::type
-        double vly_mp(int l, const MPREAL& y) const throw(std::runtime_error) {
+        double vly_mp(int l, const accurate_fp_type& y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -135,13 +145,13 @@ namespace irlib {
          * @param l l-th basis function
          * @return  reference to the l-th basis function
          */
-        const piecewise_polynomial<double,MPREAL> &ul(int l) const throw(std::runtime_error) {
+        const piecewise_polynomial<double,accurate_fp_type> &ul(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return u_basis_[l];
         }
 
-        const piecewise_polynomial<double,MPREAL> &vl(int l) const throw(std::runtime_error) {
+        const piecewise_polynomial<double,accurate_fp_type> &vl(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return v_basis_[l];
@@ -212,6 +222,7 @@ namespace irlib {
 #ifdef SWIG
 %template(mpreal_basis_impl) basis_impl<mpfr::mpreal>;
 %template(mpreal_basis_dp_impl) basis_impl<double>;
+%template(mpreal_basis_ldp_impl) basis_impl<long double>;
 #endif
 
 }

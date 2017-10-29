@@ -144,7 +144,7 @@ TEST(ComparisonMPvsDP, Fermion) {
     for (int s=0; s<basis_mp.ul(0).num_sections(); ++s) {
         auto s0 = basis_dp.ul(0).section_edge(s);
         auto s1 = basis_dp.ul(0).section_edge(s+1);
-        auto xs = irlib::linspace<double>(s0, s1, 10);
+        auto xs = irlib::linspace<double>(static_cast<double>(s0), static_cast<double>(s1), 10);
         for (auto x : xs) {
             for (int l=0; l<Nl; ++l) {
                 ASSERT_NEAR(basis_dp.ulx(l,x), basis_mp.ulx(l,x), std::max(tol, tol * std::abs(basis_dp.ulx(l,x))));
@@ -164,7 +164,7 @@ typedef ::testing::Types<irlib::basis_f_dp> FermionBasisTypes;
 TYPED_TEST_CASE(ExpansionByFermionBasis, FermionBasisTypes);
 
 TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
-  using scalar_type = typename TypeParam::scalar_type;
+  using accurate_fp_type = typename TypeParam::accurate_fp_type;
 
   for (auto beta : std::vector<double>{100.0, 10000.0}) {
     double Lambda = 3*beta;
@@ -178,15 +178,15 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
     //double tol = 1000*basis.sl(basis.dim()-1)/basis.sl(0);
     double tol = 1e-5;
 
-    typedef irlib::piecewise_polynomial<double,scalar_type> pp_type;
+    typedef irlib::piecewise_polynomial<double,accurate_fp_type> pp_type;
 
     const int nptr = basis.ul(0).num_sections() + 1;
-    std::vector<scalar_type> x(nptr);
+    std::vector<mpreal> x(nptr);
     for (int i = 0; i < nptr; ++i) {
       x[i] = basis.ul(0).section_edge(i);
     }
 
-    auto gtau = [&](const scalar_type& x) {
+    auto gtau = [&](const mpreal& x) {
         if (-.5*beta*x > 100.0) {
             return 0.5 * exp(-0.5*beta*(1+x));
         } else if (-.5*beta*x < -100.0) {
@@ -199,7 +199,7 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
         //return exp(-0.5*scalar_type(beta))*cosh(-0.5*beta*x);
     };
 
-    std::vector<scalar_type> section_edges;
+    std::vector<mpreal> section_edges;
     for (int s=0; s<basis.ul(0).num_sections()+1; ++s) {
         section_edges.push_back(-basis.ul(0).section_edge(
                 basis.ul(0).num_sections()-s
@@ -212,8 +212,8 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
-      auto f = [&](const scalar_type& x) {return scalar_type(gtau(x) * basis.ulx_mp(l,x));};
-      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<scalar_type,scalar_type>(section_edges, f, 12) * beta / std::sqrt(2.0));
+      auto f = [&](const accurate_fp_type& x) {return accurate_fp_type(gtau(x) * basis.ulx_mp(l,x));};
+      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<mpreal,accurate_fp_type>(section_edges, f, 12) * beta / std::sqrt(2.0));
     }
 
     std::vector<double> y_r(nptr, 0.0);

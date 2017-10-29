@@ -71,7 +71,7 @@ TEST(kernel, SVD) {
         std::vector<mpreal> section_edges_y = linspace<mpreal>(-1, 1, num_sec+1);
 
         fermionic_kernel<mpreal> kernel(Lambda);
-        auto Kmat = matrix_rep(kernel, section_edges_x, section_edges_y, num_local_nodes, Nl);
+        auto Kmat = matrix_rep<mpreal>(kernel, section_edges_x, section_edges_y, num_local_nodes, Nl);
 
         Eigen::BDCSVD<MatrixXmp> svd(Kmat, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
@@ -94,8 +94,8 @@ TEST(kernel, SVD) {
         auto kernel_odd = [&](const mpreal& x, const mpreal& y) {
             return kernel(x, y) - kernel(x, -y);
         };
-        auto Kmat_even = matrix_rep(kernel_even, section_edges_x, section_edges_y, num_local_nodes, Nl);
-        auto Kmat_odd = matrix_rep(kernel_odd, section_edges_x, section_edges_y, num_local_nodes, Nl);
+        auto Kmat_even = matrix_rep<mpreal>(kernel_even, section_edges_x, section_edges_y, num_local_nodes, Nl);
+        auto Kmat_odd = matrix_rep<mpreal>(kernel_odd, section_edges_x, section_edges_y, num_local_nodes, Nl);
 
         Eigen::BDCSVD<MatrixXmp> svd_even(Kmat_even, Eigen::ComputeFullU | Eigen::ComputeFullV);
         Eigen::BDCSVD<MatrixXmp> svd_odd(Kmat_odd, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -145,7 +145,7 @@ TEST(kernel, basis_functions) {
 
     std::vector<double> sv;
     std::vector<pp_type> u_basis, v_basis;
-    std::tie(sv,u_basis,v_basis) = generate_ir_basis_functions(kernel, max_dim, 1e-12, Nl);
+    std::tie(sv,u_basis,v_basis) = generate_ir_basis_functions<mpreal>(kernel, max_dim, 1e-12, Nl);
 
     // Check singular values
     ASSERT_NEAR(sv[0],  0.205608636 ,  1e-8);

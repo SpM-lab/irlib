@@ -37,7 +37,7 @@ namespace irlib {
         auto nodes_x = composite_gauss_legendre_nodes(section_edges, nodes);
         Ty r = 0;
         for (int n=0; n<nodes_x.size(); ++n) {
-            r += f(nodes_x[n].first) * nodes_x[n].second;
+            r += f(static_cast<Ty>(nodes_x[n].first)) * static_cast<Ty>(nodes_x[n].second);
         }
         return r;
     };
@@ -207,6 +207,7 @@ namespace irlib {
         typedef std::complex<double> dcomplex;
         typedef piecewise_polynomial<std::complex<double>,Tx> pp_type;
         typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
+        typedef Eigen::Matrix<std::complex<long double>, Eigen::Dynamic, Eigen::Dynamic> ex_matrix_t;
         typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
         //order of polynomials used for representing exponential functions internally.
@@ -241,11 +242,11 @@ namespace irlib {
         Eigen::Tensor<std::complex<double>,3> exp_coeffs(w.size(), n_section, k_iw + 1);
         construct_exp_functions_coeff(w, pp_func[0].section_edges(), k_iw, exp_coeffs);
 
-        matrix_t left_mid_matrix(n_iw, k + 1);
-        matrix_t left_matrix(n_iw, k_iw + 1);
-        matrix_t mid_matrix(k_iw + 1, k + 1);
-        matrix_t right_matrix(k + 1, pp_func.size());
-        matrix_t r(n_iw, pp_func.size());
+        ex_matrix_t left_mid_matrix(n_iw, k + 1);
+        ex_matrix_t left_matrix(n_iw, k_iw + 1);
+        ex_matrix_t mid_matrix(k_iw + 1, k + 1);
+        ex_matrix_t right_matrix(k + 1, pp_func.size());
+        ex_matrix_t r(n_iw, pp_func.size());
         r.setZero();
 
         std::vector<double> dx_power(k + k_iw + 2);
@@ -622,6 +623,11 @@ namespace irlib {
         }
 
         if (nodes_x.size() != dim - 1 || nodes_y.size() != dim - 1) {
+            std::cerr << "The number of nodes for x is " << nodes_x.size() << " , which is different from l " << dim-1 << std::endl;
+            std::cerr << "The number of nodes for y is " << nodes_y.size() << " , which is different from l " << dim-1 << std::endl;
+            for (auto n : nodes_y) {
+                std::cout << n << std::endl;
+            }
             throw std::runtime_error("The number of nodes is wrong.");
         }
 

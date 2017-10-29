@@ -10,15 +10,15 @@ plt.rc('text', usetex=True)
 N = 1000
 xvec = numpy.linspace(-1, 1, N)
 
-max_dim = 100
-cutoff = 1e-8
+max_dim = 1000
+cutoff = 1e-6 
 
 ## Construct basis
 idx = 0
 markers = ['o', 's', 'x', '+']
-for Lambda in [10000]:
+for Lambda in [1000]:
     print("Computing basis functions... It may take some time")
-    b = irlib.basis_f_dp(Lambda, max_dim, cutoff)
+    b = irlib.basis_f(Lambda, max_dim, cutoff)
     print("Done!")
 
     plt.figure(1)

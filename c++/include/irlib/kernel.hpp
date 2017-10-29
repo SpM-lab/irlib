@@ -42,15 +42,47 @@ namespace irlib {
     %template(real_kernel) kernel<mpreal>;
 #endif
 
-    template<typename mpreal>
-    class fermionic_kernel;
-
-    template<typename mpreal>
-    class bosonic_kernel;
-
     /**
      * Fermionic kernel
      */
+    template<typename S>
+    class fermionic_kernel : public kernel<S> {
+    public:
+        fermionic_kernel(S Lambda) : Lambda_(Lambda) {}
+
+        virtual ~fermionic_kernel() {};
+
+        S operator()(S x, S y) const {
+            const S limit = 100.0;
+            if (Lambda_ * y > limit) {
+                return std::exp(-0.5 * Lambda_ * x * y - 0.5 * Lambda_ * y);
+            } else if (Lambda_ * y < -limit) {
+                return std::exp(-0.5 * Lambda_ * x * y + 0.5 * Lambda_ * y);
+            } else {
+                return std::exp(-0.5 * Lambda_ * x * y) / (2 * std::cosh(0.5 * Lambda_ * y));
+            }
+        }
+
+        irlib::statistics::statistics_type get_statistics() const {
+            return irlib::statistics::FERMIONIC;
+        }
+
+        double Lambda() const {
+            return Lambda_;
+        }
+
+#ifndef SWIG
+
+        std::shared_ptr <kernel<S> > clone() const {
+            return std::shared_ptr<kernel<S> >(new fermionic_kernel<S>(Lambda_));
+        }
+
+#endif
+
+    private:
+        double Lambda_;
+    };
+
     template<>
     class fermionic_kernel<mpreal> : public kernel<mpreal> {
     public:
@@ -81,8 +113,8 @@ namespace irlib {
 
 #ifndef SWIG
 
-        std::shared_ptr<kernel> clone() const {
-            return std::shared_ptr<kernel>(new fermionic_kernel(Lambda_));
+        std::shared_ptr<kernel<mpreal>> clone() const {
+            return std::shared_ptr<kernel<mpreal>>(new fermionic_kernel(Lambda_));
         }
 
 #endif
@@ -91,29 +123,32 @@ namespace irlib {
         double Lambda_;
     };
 
+
     /**
-     * Fermionic kernel
+     * Bosonic kernel
      */
-    template<>
-    class fermionic_kernel<double> : public kernel<double> {
+    template<typename S>
+    class bosonic_kernel : public kernel<S> {
     public:
-        fermionic_kernel(double Lambda) : Lambda_(Lambda) {}
+        bosonic_kernel(double Lambda) : Lambda_(Lambda) {}
 
-        virtual ~fermionic_kernel() {};
+        virtual ~bosonic_kernel() {};
 
-        double operator()(double x, double y) const {
-            const double limit = 100.0;
-            if (Lambda_ * y > limit) {
-                return std::exp(-0.5 * Lambda_ * x * y - 0.5 * Lambda_ * y);
+        S operator()(S x, S y) const {
+            const S limit = 100.0;
+            if (std::abs(Lambda_ * y) < 1e-10) {
+                return std::exp(-0.5 * Lambda_ * x * y) / Lambda_;
+            } else if (Lambda_ * y > limit) {
+                return y * std::exp(-0.5 * Lambda_ * x * y - 0.5 * Lambda_ * y);
             } else if (Lambda_ * y < -limit) {
-                return std::exp(-0.5 * Lambda_ * x * y + 0.5 * Lambda_ * y);
+                return -y * std::exp(-0.5 * Lambda_ * x * y + 0.5 * Lambda_ * y);
             } else {
-                return std::exp(-0.5 * Lambda_ * x * y) / (2 * std::cosh(0.5 * Lambda_ * y));
+                return y * std::exp(-0.5 * Lambda_ * x * y) / (2 * std::sinh(0.5 * Lambda_ * y));
             }
         }
 
         irlib::statistics::statistics_type get_statistics() const {
-            return irlib::statistics::FERMIONIC;
+            return irlib::statistics::BOSONIC;
         }
 
         double Lambda() const {
@@ -122,8 +157,8 @@ namespace irlib {
 
 #ifndef SWIG
 
-        std::shared_ptr <kernel> clone() const {
-            return std::shared_ptr<kernel>(new fermionic_kernel<double>(Lambda_));
+        std::shared_ptr <kernel<S>> clone() const {
+            return std::shared_ptr<kernel<S>>(new bosonic_kernel<S>(Lambda_));
         }
 
 #endif
@@ -132,9 +167,6 @@ namespace irlib {
         double Lambda_;
     };
 
-    /**
-     * Bosonic kernel
-     */
     template<>
     class bosonic_kernel<mpreal> : public kernel<mpreal> {
     public:
@@ -167,48 +199,8 @@ namespace irlib {
 
 #ifndef SWIG
 
-        std::shared_ptr<kernel> clone() const {
-            return std::shared_ptr<kernel>(new bosonic_kernel(Lambda_));
-        }
-
-#endif
-
-    private:
-        double Lambda_;
-    };
-
-    template<>
-    class bosonic_kernel<double> : public kernel<double> {
-    public:
-        bosonic_kernel(double Lambda) : Lambda_(Lambda) {}
-
-        virtual ~bosonic_kernel() {};
-
-        double operator()(double x, double y) const {
-            const double limit = 100.0;
-            if (std::abs(Lambda_ * y) < 1e-10) {
-                return std::exp(-0.5 * Lambda_ * x * y) / Lambda_;
-            } else if (Lambda_ * y > limit) {
-                return y * std::exp(-0.5 * Lambda_ * x * y - 0.5 * Lambda_ * y);
-            } else if (Lambda_ * y < -limit) {
-                return -y * std::exp(-0.5 * Lambda_ * x * y + 0.5 * Lambda_ * y);
-            } else {
-                return y * std::exp(-0.5 * Lambda_ * x * y) / (2 * std::sinh(0.5 * Lambda_ * y));
-            }
-        }
-
-        irlib::statistics::statistics_type get_statistics() const {
-            return irlib::statistics::BOSONIC;
-        }
-
-        double Lambda() const {
-            return Lambda_;
-        }
-
-#ifndef SWIG
-
-        std::shared_ptr <kernel> clone() const {
-            return std::shared_ptr<kernel>(new bosonic_kernel<double>(Lambda_));
+        std::shared_ptr<kernel<mpreal>> clone() const {
+            return std::shared_ptr<kernel<mpreal>>(new bosonic_kernel(Lambda_));
         }
 
 #endif
@@ -219,7 +211,7 @@ namespace irlib {
 
     /**
      * Compute Matrix representation of a given Kernel
-     * @tparam mp_type
+     * @tparam Scalar
      * @tparam K
      * @param kernel
      * @param section_edges_x
@@ -228,43 +220,44 @@ namespace irlib {
      * @param Nl
      * @return Matrix representation
      */
-    template<typename mp_type, typename K>
-    Eigen::Matrix<mp_type, Eigen::Dynamic, Eigen::Dynamic>
+    template<typename Scalar, typename K>
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
     matrix_rep(const K &kernel,
-               const std::vector<mp_type> &section_edges_x,
-               const std::vector<mp_type> &section_edges_y,
+               const std::vector<mpreal> &section_edges_x,
+               const std::vector<mpreal> &section_edges_y,
                int num_local_nodes,
                int Nl) {
 
-        using matrix_type = Eigen::Matrix<mp_type, Eigen::Dynamic, Eigen::Dynamic>;
+        using mpreal_matrix_type = Eigen::Matrix<mpreal, Eigen::Dynamic, Eigen::Dynamic>;
+        using matrix_type = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>;
 
         int num_sec_x = section_edges_x.size() - 1;
         int num_sec_y = section_edges_y.size() - 1;
 
         // nodes for Gauss-Legendre integration
-        std::vector<std::pair<mp_type, mp_type >> nodes = detail::gauss_legendre_nodes<mp_type>(num_local_nodes);
+        std::vector<std::pair<mpreal, mpreal >> nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
         auto nodes_x = composite_gauss_legendre_nodes(section_edges_x, nodes);
         auto nodes_y = composite_gauss_legendre_nodes(section_edges_y, nodes);
 
-        std::vector<matrix_type> phi_x(num_sec_x);
+        std::vector<mpreal_matrix_type> phi_x(num_sec_x);
         for (int s = 0; s < num_sec_x; ++s) {
-            phi_x[s] = matrix_type(Nl, num_local_nodes);
+            phi_x[s] = mpreal_matrix_type(Nl, num_local_nodes);
             for (int n = 0; n < num_local_nodes; ++n) {
                 for (int l = 0; l < Nl; ++l) {
                     auto leg_val = normalized_legendre_p(l, nodes[n].first);
-                    phi_x[s](l, n) = detail::sqrt<mp_type>(mp_type(2) / (section_edges_x[s + 1] - section_edges_x[s])) * leg_val *
+                    phi_x[s](l, n) = detail::sqrt<mpreal>(mpreal(2) / (section_edges_x[s + 1] - section_edges_x[s])) * leg_val *
                                      nodes_x[s * num_local_nodes + n].second;
                 }
             }
         }
 
-        std::vector<matrix_type> phi_y(num_sec_y);
+        std::vector<mpreal_matrix_type> phi_y(num_sec_y);
         for (int s = 0; s < num_sec_y; ++s) {
-            phi_y[s] = matrix_type(Nl, num_local_nodes);
+            phi_y[s] = mpreal_matrix_type(Nl, num_local_nodes);
             for (int n = 0; n < num_local_nodes; ++n) {
                 for (int l = 0; l < Nl; ++l) {
                     auto leg_val = normalized_legendre_p(l, nodes[n].first);
-                    phi_y[s](l, n) = detail::sqrt<mp_type>(mp_type(2) / (section_edges_y[s + 1] - section_edges_y[s])) * leg_val *
+                    phi_y[s](l, n) = detail::sqrt<mpreal>(mpreal(2) / (section_edges_y[s + 1] - section_edges_y[s])) * leg_val *
                                      nodes_y[s * num_local_nodes + n].second;
                 }
             }
@@ -274,20 +267,21 @@ namespace irlib {
         for (int s2 = 0; s2 < num_sec_y; ++s2) {
             for (int s = 0; s < num_sec_x; ++s) {
 
-                matrix_type K_nn(num_local_nodes, num_local_nodes);
+                mpreal_matrix_type K_nn(num_local_nodes, num_local_nodes);
                 for (int n = 0; n < num_local_nodes; ++n) {
                     for (int n2 = 0; n2 < num_local_nodes; ++n2) {
-                        K_nn(n, n2) = kernel(nodes_x[s * num_local_nodes + n].first,
-                                             nodes_y[s2 * num_local_nodes + n2].first);
+                        K_nn(n, n2) = kernel(static_cast<Scalar>(nodes_x[s * num_local_nodes + n].first),
+                                             static_cast<Scalar>(nodes_y[s2 * num_local_nodes + n2].first)
+                        );
                     }
                 }
 
                 // phi_x(l, n) * K_nn(n, n2) * phi_y(l2, n2)^T
-                matrix_type r = phi_x[s] * K_nn * phi_y[s2].transpose();
+                mpreal_matrix_type r = phi_x[s] * K_nn * phi_y[s2].transpose();
 
                 for (int l2 = 0; l2 < Nl; ++l2) {
                     for (int l = 0; l < Nl; ++l) {
-                        K_mat(Nl * s + l, Nl * s2 + l2) = r(l, l2);
+                        K_mat(Nl * s + l, Nl * s2 + l2) = static_cast<Scalar>(r(l, l2));
                     }
                 }
             }
@@ -297,20 +291,20 @@ namespace irlib {
     }
 
 
-    template<typename ScalarType>
+    template<typename ScalarType, typename KernelType>
     std::tuple<
             std::vector<double>,
-            std::vector<piecewise_polynomial<double,ScalarType>>,
-            std::vector<piecewise_polynomial<double,ScalarType>>
+            std::vector<piecewise_polynomial<double,mpreal>>,
+            std::vector<piecewise_polynomial<double,mpreal>>
     >
     generate_ir_basis_functions_impl(
-            const kernel<ScalarType> &kernel,
+            const KernelType &kernel,
             int max_dim,
             double sv_cutoff,
             int Nl,
             int num_nodes_gauss_legendre,
-            const std::vector<ScalarType> &section_edges_x,
-            const std::vector<ScalarType> &section_edges_y,
+            const std::vector<mpreal> &section_edges_x,
+            const std::vector<mpreal> &section_edges_y,
             std::vector<double> &residual_x,
             std::vector<double> &residual_y
     ) throw(std::runtime_error) {
@@ -323,11 +317,15 @@ namespace irlib {
 
         // Compute Kernel matrix and do SVD for even/odd sector
         auto kernel_even = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) + kernel(x, -y); };
-        auto Kmat_even = irlib::matrix_rep<ScalarType>(kernel_even, section_edges_x, section_edges_y, num_nodes_gauss_legendre, Nl);
+        auto Kmat_even = irlib::matrix_rep<ScalarType>(
+                kernel_even, section_edges_x, section_edges_y, num_nodes_gauss_legendre, Nl
+        );
         Eigen::BDCSVD<matrix_t> svd_even(Kmat_even, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
         auto kernel_odd = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) - kernel(x, -y); };
-        auto Kmat_odd = irlib::matrix_rep<ScalarType>(kernel_odd, section_edges_x, section_edges_y, num_nodes_gauss_legendre, Nl);
+        auto Kmat_odd = irlib::matrix_rep<ScalarType>(
+                kernel_odd, section_edges_x, section_edges_y, num_nodes_gauss_legendre, Nl
+        );
         Eigen::BDCSVD<matrix_t> svd_odd(Kmat_odd, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
         // Pick up singular values and basis functions larger than cutoff
@@ -367,8 +365,8 @@ namespace irlib {
         }
 
 
-        auto gen_pp = [&](const std::vector<ScalarType> &section_edges, const std::vector<vector_t> &vectors) {
-            std::vector<piecewise_polynomial<double,ScalarType>> pp;
+        auto gen_pp = [&](const std::vector<mpreal> &section_edges, const std::vector<vector_t> &vectors) {
+            std::vector<piecewise_polynomial<double,mpreal>> pp;
 
             int ns_pp = section_edges.size() - 1;
             for (int v = 0; v < vectors.size(); ++v) {
@@ -382,18 +380,18 @@ namespace irlib {
                 for (int s = 0; s < section_edges.size() - 1; ++s) {
                     // loop over normalized Ledendre polynomials
                     for (int l = 0; l < Nl; ++l) {
-                        ScalarType coeff2(1 / detail::sqrt<ScalarType>(section_edges[s + 1] - section_edges[s]));
+                        ScalarType coeff2(1 / detail::sqrt<ScalarType>(static_cast<ScalarType>(section_edges[s + 1] - section_edges[s])));
                         // loop over the orders of derivatives
                         for (int d = 0; d < Nl; ++d) {
                             auto tmp = static_cast<double>(
                                     inv_factorial[d] * coeff2 * vectors[v][s * Nl + l] * deriv_xm1[l][d]
                             );
                             coeff(s, d) += tmp;
-                            coeff2 *= 2 / (section_edges[s + 1] - section_edges[s]);
+                            coeff2 *= 2 / static_cast<ScalarType>(section_edges[s + 1] - section_edges[s]);
                         }
                     }
                 }
-                pp.push_back(piecewise_polynomial<double,ScalarType>(section_edges.size() - 1, section_edges, coeff));
+                pp.push_back(piecewise_polynomial<double,mpreal>(section_edges.size() - 1, section_edges, coeff));
             }
 
             return pp;
@@ -418,14 +416,14 @@ namespace irlib {
             for (int s = 0; s < residual_x.size(); ++s) {
                 residual_x[s] = std::max(
                         residual_x[s],
-                        static_cast<double>(pow(Uvec[l](s * Nl + Nl - 1), 2) + pow(Uvec[l](s * Nl + Nl - 2), 2))
+                        static_cast<double>(pow(Uvec[l](s * Nl + Nl - 1), 2) )
                 );
             }
 
             for (int s = 0; s < residual_y.size(); ++s) {
                 residual_y[s] = std::max(
                         residual_y[s],
-                        static_cast<double>(pow(Vvec[l](s * Nl + Nl - 1), 2) + pow(Vvec[l](s * Nl + Nl - 2), 2))
+                        static_cast<double>(pow(Vvec[l](s * Nl + Nl - 1), 2) )
                 );
             }
         }
@@ -433,47 +431,38 @@ namespace irlib {
         return std::make_tuple(sv, u_basis_pp, v_basis_pp);
     }
 
-    template<typename ScalarType>
+    template<typename ScalarType, typename KernelType>
     std::tuple<
             std::vector<double>,
-            std::vector<piecewise_polynomial<double,ScalarType>>,
-            std::vector<piecewise_polynomial<double,ScalarType>>
+            std::vector<piecewise_polynomial<double,mpreal>>,
+            std::vector<piecewise_polynomial<double,mpreal>>
     >
     generate_ir_basis_functions(
-            const kernel<ScalarType> &kernel,
+            const KernelType &kernel,
             int max_dim,
             double sv_cutoff = 1e-12,
             int Nl = 10,
             int num_nodes_gauss_legendre = 12,
-            double aeps = 1e-8
+            double aeps = 1e-10
     ) throw(std::runtime_error) {
         using vector_t = Eigen::Matrix<ScalarType, Eigen::Dynamic, 1>;
-
-        // Increase default precision if needed
-        {
-            auto min_prec = std::max(ir_digits2bits(std::log10(1 / sv_cutoff) + 15), long(100));
-            if (min_prec > ir_get_default_prec<ScalarType>()) {
-                ir_set_default_prec<ScalarType>(min_prec);
-            }
-        }
-
         // Compute approximate positions of nodes of the highest basis function in the even sector
         std::vector<double> nodes_x, nodes_y;
-        std::tie(nodes_x, nodes_y) = compute_approximate_nodes_even_sector(kernel, 200, std::max(1e-12, sv_cutoff));
+        std::tie(nodes_x, nodes_y) = compute_approximate_nodes_even_sector(kernel, 500, std::max(1e-12, sv_cutoff));
 
         auto gen_section_edges = [](const std::vector<double> &nodes) {
-            std::vector<ScalarType> section_edges;
+            std::vector<mpreal> section_edges;
             section_edges.push_back(0);
             for (int i = 0; i < nodes.size(); ++i) {
-                section_edges.push_back(static_cast<ScalarType>(nodes[i]));
+                section_edges.push_back(static_cast<mpreal>(nodes[i]));
             }
             section_edges.push_back(1);
             return section_edges;
         };
 
-        auto u = [](const std::vector<ScalarType> &section_edges,
+        auto u = [](const std::vector<mpreal> &section_edges,
                     std::vector<double> &residual, double eps) {
-            std::vector<ScalarType> section_edges_new(section_edges);
+            std::vector<mpreal> section_edges_new(section_edges);
             for (int s = 0; s < section_edges.size() - 1; ++s) {
                 if (residual[s] > eps) {
                     section_edges_new.push_back(
@@ -485,8 +474,8 @@ namespace irlib {
             return section_edges_new;
         };
 
-        std::vector<ScalarType> section_edges_x = gen_section_edges(nodes_x);
-        std::vector<ScalarType> section_edges_y = gen_section_edges(nodes_y);
+        std::vector<mpreal> section_edges_x = gen_section_edges(nodes_x);
+        std::vector<mpreal> section_edges_y = gen_section_edges(nodes_y);
 
         int ite = 0;
 
@@ -494,7 +483,7 @@ namespace irlib {
         while (true) {
             //std::cout << "ite " << ite <<  " " << section_edges_x.size() + section_edges_y.size() << std::endl;
             std::vector<double> residual_x, residual_y;
-            auto r = generate_ir_basis_functions_impl(kernel, max_dim, sv_cutoff, Nl, num_nodes_gauss_legendre,
+            auto r = generate_ir_basis_functions_impl<ScalarType>(kernel, max_dim, sv_cutoff, Nl, num_nodes_gauss_legendre,
                                                       section_edges_x,
                                                       section_edges_y,
                                                       residual_x,

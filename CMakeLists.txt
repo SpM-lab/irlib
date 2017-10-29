@@ -26,6 +26,7 @@ find_package(GMP REQUIRED) #TO DO: version check (>=4.2.1) & MPIR support
 if (BUILD_DOCUMENTATION)
   find_package(Doxygen REQUIRED)
 endif()
+# find_package(BOOST)
 
 #include directories
 set(EIGEN3_INCLUDE_DIR "thirdparty/eigen3")

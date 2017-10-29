@@ -10,27 +10,25 @@ plt.rc('text', usetex=True)
 N = 1000
 xvec = numpy.linspace(-1, 1, N)
 
-max_dim = 20
-cutoff = 1e-8
-
-markers = ['o', 'x']
+max_dim = 10000
+cutoff = 1e-6
 
 ## Construct basis
 idx = 0
 markers = ['o', 's', 'x', '+']
-for Lambda in [100, 10000]:
+for Lambda in [10000]:
     print("Computing basis functions... It may take some time")
     b_dp = irlib.basis_f_dp(Lambda, max_dim, cutoff)
     b = irlib.basis_f(Lambda, max_dim, cutoff)
-    print("Done!")
+    print("Done! dim = ", b.dim())
 
     plt.figure(1)
     for l in [0, b.dim()-1]:
-        plt.plot(xvec, numpy.array([numpy.abs(b.ulx(l,x)-b_dp.ulx(l,x)) for x in xvec]))
+        plt.plot(xvec, numpy.array([numpy.abs(b.ulx(l,x)-b_dp.ulx(l,x)) for x in xvec]), label='l='+str(l))
 
     plt.figure(2)
     for l in [0, b.dim()-1]:
-        plt.plot(xvec, numpy.array([numpy.abs(b.vly(l,x)-b_dp.vly(l,x)) for x in xvec]))
+        plt.plot(xvec, numpy.array([numpy.abs(b.vly(l,x)-b_dp.vly(l,x)) for x in xvec]), label='l='+str(l))
 
     n_vec = numpy.array([2**i for i in range(30)])
     Tnl = b.compute_Tnl(n_vec)

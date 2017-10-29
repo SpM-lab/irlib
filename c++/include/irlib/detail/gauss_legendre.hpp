@@ -9,18 +9,20 @@ namespace irlib {
 namespace detail {
 
 template<typename S>
-inline
-S stoscalar(const std::string& s);
+inline S stoscalar(const std::string& s);
 
 template<>
-inline
-double stoscalar<double>(const std::string& s) {
+inline double stoscalar<double>(const std::string& s) {
    return std::stof(s);
 }
 
 template<>
-inline
-mpfr::mpreal stoscalar<mpfr::mpreal>(const std::string& s) {
+inline long double stoscalar<long double>(const std::string& s) {
+   return std::stof(s);
+}
+
+template<>
+inline mpfr::mpreal stoscalar<mpfr::mpreal>(const std::string& s) {
    return mpfr::mpreal(s);
 }
 
