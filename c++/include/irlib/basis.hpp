@@ -47,4 +47,12 @@ namespace irlib {
                 int n_local_poly = 10) throw(std::runtime_error)
                 : basis_impl<mpfr::mpreal>(irlib::statistics::BOSONIC, Lambda, max_dim, cutoff, n_local_poly) {}
     };
+
+    class basis_b_dp : public basis_impl<double> {
+    public:
+        basis_b_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-6,
+                   int n_local_poly = 10) throw(std::runtime_error)
+                : basis_impl<double>(irlib::statistics::BOSONIC, Lambda, max_dim, cutoff, n_local_poly) {}
+    };
+
 }

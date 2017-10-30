@@ -352,13 +352,19 @@ namespace irlib {
         }
 
         long offset = (statis == statistics::FERMIONIC ? 1 : 0);
-        int sign_s = (statis == statistics::FERMIONIC ? 1 : -1);
 
         // compute tails
+        int sign_s = (statis == statistics::FERMIONIC ? -1 : 1);
         int num_tail = 2*(bf_src[0].order()/2) ;//this is an even number
+        if (num_tail < 4) {
+            throw std::runtime_error("num_tail < 4.");
+        }
         MatrixXc tails(bf_src.size(), num_tail);
+        const std::complex<double> zi(0.0, 1.0);
         for (int l=0; l<bf_src.size(); ++l) {
             for (int m=0; m<num_tail; ++m) {
+                int sign_lm = (l+m)%2==0 ? 1 : -1;
+/*
                 int sign_m1 = (l+m)%2==0 ? 1 : -1;
                 if (sign_s == sign_m1) {
                     double am = std::sqrt(2.0) * std::pow(2, m) * (sign_s + sign_m1) * bf_src[l].derivative(1, m);
@@ -366,6 +372,8 @@ namespace irlib {
                 } else {
                     tails(l,m) = 0.0;
                 }
+                */
+                tails(l,m) = - std::sqrt(2.0) * std::pow(2, m) * std::pow(zi, m+1) * static_cast<double>(sign_s - sign_lm) * bf_src[l].derivative(1, m);
             }
         }
 
@@ -374,8 +382,8 @@ namespace irlib {
         std::vector<int> num_low_freq(Nl);
         double eps = 1e-8;
         for (int l=0; l<Nl; ++l) {
-            int m_low = l%2==0 ?  0 : 1;
-            int m_high = l%2==0 ?  num_tail-2 : num_tail-1;
+            int m_low = (l+offset-1)%2==0 ?  0 : 1;
+            int m_high = (l+offset-1)%2==0 ?  num_tail-2 : num_tail-1;
             double wn_limit = std::pow(eps * std::abs(tails(l,m_low)/tails(l,m_high)), 1.0/(m_low-m_high) );
             double n_limit = 0.5*(wn_limit/M_PI-offset);
 
@@ -395,6 +403,8 @@ namespace irlib {
         for(int l=0; l<Nl; ++l) {
             for(int i=0; i<max_num_low_freq; ++i) {
                 Tnl(i,l) = Tnl_low_freq(i,l);
+                if (i==0) {
+}
             }
         }
 
@@ -594,9 +604,6 @@ namespace irlib {
         }
 
         //Perform SVD
-        //Eigen::VectorXd svalues(N);
-        //matrix_t U(N, N), Vt(N, N);
-        //svd_square_matrix(K, N, svalues, Vt, U);
         Eigen::BDCSVD<matrix_t> svd(K, Eigen::ComputeFullU | Eigen::ComputeFullV);
         const Eigen::VectorXd& svalues = svd.singularValues();
         const matrix_t& U = svd.matrixU();

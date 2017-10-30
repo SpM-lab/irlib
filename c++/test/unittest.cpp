@@ -154,29 +154,27 @@ TEST(ComparisonMPvsDP, Fermion) {
 }
 
 template<class T>
-class ExpansionByFermionBasis : public testing::Test {
+class ExpansionByIRBasis : public testing::Test {
 };
 
-//typedef ::testing::Types<irlib::basis_f> FermionBasisTypes;
-//typedef ::testing::Types<irlib::basis_f, irlib::basis_f_dp> FermionBasisTypes;
-typedef ::testing::Types<irlib::basis_f_dp> FermionBasisTypes;
+typedef ::testing::Types<irlib::basis_f, irlib::basis_f_dp, irlib::basis_b, irlib::basis_b_dp> AllBasisTypes;
 
-TYPED_TEST_CASE(ExpansionByFermionBasis, FermionBasisTypes);
+TYPED_TEST_CASE(ExpansionByIRBasis, AllBasisTypes);
 
-TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
+TYPED_TEST(ExpansionByIRBasis, AllBasisTypes) {
   using accurate_fp_type = typename TypeParam::accurate_fp_type;
 
   for (auto beta : std::vector<double>{100.0, 10000.0}) {
     double Lambda = 3*beta;
     int max_dim = 10000;
-      //std::cout << "constructing " << std::endl;
-    TypeParam  basis(Lambda, max_dim, 1e-8);
-      //std::cout << "done " << std::endl;
-    ASSERT_TRUE(basis.dim()>0);
-      //std::cout << " beta " << beta << " " << basis.dim() << std::endl;
+    double w_positive_pole = 0.6;
+    double w_negative_pole = 0.4;
 
-    //double tol = 1000*basis.sl(basis.dim()-1)/basis.sl(0);
-    double tol = 1e-5;
+    TypeParam  basis(Lambda, max_dim, 1e-8);
+    const auto statis = basis.get_statistics();
+    ASSERT_TRUE(basis.dim()>0);
+
+    double tol = 1e-7;
 
     typedef irlib::piecewise_polynomial<double,accurate_fp_type> pp_type;
 
@@ -186,20 +184,35 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
       x[i] = basis.ul(0).section_edge(i);
     }
 
-    auto gtau = [&](const mpreal& x) {
-        if (-.5*beta*x > 100.0) {
-            return 0.5 * exp(-0.5*beta*(1+x));
-        } else if (-.5*beta*x < -100.0) {
-            return 0.5 * exp(-0.5*beta*(1-x));
+    auto gx = [&](const accurate_fp_type & x) {
+        if (statis == statistics::FERMIONIC) {
+            if (-.5*beta*x > 100.0) {
+                return w_positive_pole * exp(-0.5*beta*(1+x));
+            } else if (-.5*beta*x < -100.0) {
+                return w_negative_pole * exp(-0.5*beta*(1-x));
+            } else {
+                //here we assume exp(0.5*beta) >> 1.
+                return exp(-0.5*beta)* (w_positive_pole * exp(-0.5*beta*x) + w_negative_pole * exp(0.5*beta*x));
+            }
         } else {
-            return exp(-0.5*beta)*cosh(-0.5*beta*x);
+            //do boson
+            if (-.5*beta*x > 100.0) {
+                return w_positive_pole * exp(-0.5*beta*(1+x));
+            } else if (-.5*beta*x < -100.0) {
+                return -w_negative_pole * exp(-0.5*beta*(1-x));
+            } else {
+                //here we assume exp(0.5*beta) >> 1.
+                return exp(-0.5*beta)* (w_positive_pole * exp(-0.5*beta*x) - w_negative_pole * exp(0.5*beta*x));
+            }
         }
-
-        //return exp(-0.5*scalar_type(beta))*cosh(-0.5*beta*x);
-        //return exp(-0.5*scalar_type(beta))*cosh(-0.5*beta*x);
     };
 
-    std::vector<mpreal> section_edges;
+    //auto current_model{test_model<basis.get_statistics(), accurate_fp_type>()};
+    //auto gx = [&](const accurate_fp_type & x) {
+        //return current_model.gx(x, beta);
+    //};
+
+    std::vector<accurate_fp_type > section_edges;
     for (int s=0; s<basis.ul(0).num_sections()+1; ++s) {
         section_edges.push_back(-basis.ul(0).section_edge(
                 basis.ul(0).num_sections()-s
@@ -208,12 +221,11 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
     for (int s=0; s<basis.ul(0).num_sections()+1; ++s) {
         section_edges.push_back(basis.ul(0).section_edge(s));
     }
-    //auto section_edges = irlib::linspace<scalar_type>(-1, 1, 50000);
 
     std::vector<double> coeff(basis.dim());
     for (int l = 0; l < basis.dim(); ++l) {
-      auto f = [&](const accurate_fp_type& x) {return accurate_fp_type(gtau(x) * basis.ulx_mp(l,x));};
-      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<mpreal,accurate_fp_type>(section_edges, f, 12) * beta / std::sqrt(2.0));
+      auto f = [&](const accurate_fp_type& x) {return accurate_fp_type(gx(x) * basis.ulx_mp(l,x));};
+      coeff[l] = static_cast<double>(irlib::integrate_gauss_legendre<accurate_fp_type ,accurate_fp_type>(section_edges, f, 12) * beta / std::sqrt(2.0));
     }
 
     std::vector<double> y_r(nptr, 0.0);
@@ -225,9 +237,8 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
 
     double max_diff = 0.0;
     for (int i = 0; i < nptr; ++i) {
-        //std::cout << x[i] << " " << gtau(x[i]) << " " << y_r[i] << " " << gtau(x[i])-y_r[i] << std::endl;
       max_diff = std::max(
-                      std::abs(static_cast<double>(gtau(x[i])-y_r[i])),
+                      std::abs(static_cast<double>(gx(x[i])-y_r[i])),
                       max_diff);
     }
     ASSERT_NEAR(max_diff, 0.0, tol);
@@ -250,12 +261,12 @@ TYPED_TEST(ExpansionByFermionBasis, FermionBasisTypes) {
     MatrixXc coeff_iw = Eigen::Map<MatrixXc>(&Tnl_tensor(0,0), n_vec.size(), basis.dim()) * coeff_vec;
 
     const std::complex<double> zi(0.0, 1.0);
+    int offset = (statis == irlib::statistics::FERMIONIC ? 1 : 0);
     for (int n = 0; n < n_iw; ++n) {
-      double wn = (2.*n_vec[n]+1)*M_PI/beta;
-      std::complex<double> z = - 0.5/(zi*wn - 1.0) - 0.5/(zi*wn + 1.0);
+      double wn = (2.*n_vec[n]+offset)*M_PI/beta;
+      std::complex<double> z = - w_positive_pole/(zi*wn - 1.0) - w_negative_pole/(zi*wn + 1.0);
       ASSERT_NEAR(z.real(), coeff_iw(n).real(), tol);
       ASSERT_NEAR(z.imag(), coeff_iw(n).imag(), tol);
-        //std::cout << " n " << n << " " << z.imag() << " " << z.imag() - coeff_iw(n).imag() << std::endl;
     }
 
   }
