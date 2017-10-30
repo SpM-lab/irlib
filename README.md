@@ -1,6 +1,6 @@
 irlib
 ======
-C++ header only library for generating kernel "intermediate-representation" (ir) basis written by Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki,
+C++ header only library for generating kernel "intermediate-representation" (ir) basis written by Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki.
 Please refer to H. Shinaoka, J. Otsuki, M. Ohzeki and K. Yoshimi, PRB 96, 035147 (2017).
 The basis functions u_l(x) and v_l(y) are orthonormal on the interval [-1,1] with weight 1.
 The sign of u_l(x) is chosen so that u_l(1) > 0.
@@ -18,8 +18,8 @@ The sign of u_l(x) is chosen so that u_l(1) > 0.
 
 ### GMP (>= 4.21)
 
-### Python 2.7 or 3.5
-For building Python binding
+### Python 2.7 or 3.x
+For building Python binding.
 
 ### SWIG (>= 3.0)
 For building Python binding
