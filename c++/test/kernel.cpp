@@ -112,7 +112,7 @@ TEST(kernel, SVD) {
 
 TEST(kernel, transformation_to_matsubara) {
     int ns = 1000;
-    int k = 3;
+    int k = 4;
 
     Eigen::MatrixXd coeff(ns, k+1);
     coeff.setZero();
