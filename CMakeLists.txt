@@ -39,7 +39,7 @@ option(PYTHON "Build Python bindings" ON)
 # Build and enable tests
 # testing setup
 # enable_testing() must be called in the top-level CMakeLists.txt before any add_subdirectory() is called.
-option(Testing "Enable testing" ON)
+option(Testing "Enable testing" OFF)
 
 if (Testing)
   include(EnableTests) #defined in ./cmake
