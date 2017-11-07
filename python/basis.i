@@ -46,7 +46,6 @@ using namespace irlib;
  */
 
 %include <irlib/basis_impl.hpp>
-//%include <irlib/basis_impl2.hpp>
 %include <irlib/basis.hpp>
 
 /* %template(real_piecewise_polynomial) alps::gf::piecewise_polynomial<double>; */

@@ -64,8 +64,6 @@ class CMakeBuild(build_ext):
             os.makedirs(self.build_temp)
         args1 = prepare_args(['cmake', ext.sourcedir] + cmake_args)
         args2 = prepare_args(['cmake', '--build', '.'] + build_args)
-        #print shlex.split(args1)
-        #print shlex.split(args2)
         subprocess.check_call(shlex.split(args1), cwd=self.build_temp, env=env)
         subprocess.check_call(shlex.split(args2), cwd=self.build_temp)
 

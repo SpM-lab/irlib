@@ -9,6 +9,10 @@ project (irlib CXX)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/common/cmake)
 
 # Print build type
+if(NOT CMAKE_BUILD_TYPE)
+    message("Using default build type: Release")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Build doc
@@ -30,7 +34,7 @@ endif()
 
 #include directories
 set(EIGEN3_INCLUDE_DIR "thirdparty/eigen3")
-set(IRLIB_LIBRARY_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS} ${MPFR_INCLUDES} ${GMP_INCLUDE_DIR} "c++/include" "thirdparty/mpfr_cxx" "test") #rest taken care of by libraries dependencies
+set(IRLIB_LIBRARY_INCLUDE_DIRS "c++/include" "thirdparty/mpfr_cxx" "test" ${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported ${Boost_INCLUDE_DIRS} ${MPFR_INCLUDES} ${GMP_INCLUDE_DIR}) #rest taken care of by libraries dependencies
 include_directories(${IRLIB_LIBRARY_INCLUDE_DIRS})
 
 #Python bindings
