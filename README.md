@@ -69,7 +69,7 @@ You can find examples below the directory "examples" in the source directory.
 ## License
 All files except for those in the directory "thirdparty" are licensed under MIT license. See LICENSE for more details.
 
-## Trouble shouting
+## Trouble shooting
 In case you have multiple Python installations on your machine, cmake may pick up a wrong one.
 To force cmake to use the correct one,
 you can tell the location of the executable like this.
@@ -83,7 +83,6 @@ In such a case, you must pass the include directory and the location of the Pyth
 
 ```
 $ cmake \
-     -DCMAKE_BUILD_TYPE=Release \
      -DPYTHON_EXECUTABLE=/usr/local/bin/python3.6 \
      -DPYTHON_INCLUDE_DIR=/usr/local/Frameworks/Python.framework/Versions/3.6/include/python3.6m \
      -DPYTHON_LIBRARY=/usr/local/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6m.dylib \
