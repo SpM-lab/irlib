@@ -67,4 +67,4 @@ Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki
 You can find examples below the directory "examples" in the source directory.
 
 ## License
-All files except for those in the directory "thirdparty" are licensed under MIT license. See LICENSE.txt for more details.
+All files except for those in the directory "thirdparty" are licensed under MIT license. See LICENSE for more details.
