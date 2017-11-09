@@ -1,6 +1,6 @@
 irlib
 ======
-C++ header only library for generating kernel "intermediate-representation" (ir) basis written by Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki.
+C++ header only library for generating kernel "intermediate-representation" (ir) basis.
 Please refer to H. Shinaoka, J. Otsuki, M. Ohzeki and K. Yoshimi, PRB 96, 035147 (2017).
 The basis functions u_l(x) and v_l(y) are orthonormal on the interval [-1,1] with weight 1.
 The sign of u_l(x) is chosen so that u_l(1) > 0.
@@ -60,8 +60,11 @@ C++ header files will be installed to CMAKE\_INSTALL\_PREFIX.
 By default, the Python modules will be installed into a per user site-packages directory.
 If you want the modules to be installed into a system site-packages directory, please pass "-DINSTALL\_INTO\_USER\_SITE_PACKAGES\_DIRECTORY=OFF" to cmake.
 
+## Contributors
+Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki
+
 ## Examples
 You can find examples below the directory "examples" in the source directory.
 
 ## License
-All files except for those in the directory "thirdparty" are licensed under GPLv3 or any later version. See LICENSE.txt for more details.
+All files except for those in the directory "thirdparty" are licensed under MIT license. See LICENSE.txt for more details.
