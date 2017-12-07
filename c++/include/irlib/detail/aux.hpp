@@ -403,8 +403,6 @@ namespace irlib {
         for(int l=0; l<Nl; ++l) {
             for(int i=0; i<max_num_low_freq; ++i) {
                 Tnl(i,l) = Tnl_low_freq(i,l);
-                if (i==0) {
-}
             }
         }
 

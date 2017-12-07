@@ -11,7 +11,7 @@ N = 1000
 xvec = numpy.linspace(-1, 1, N)
 
 max_dim = 10000
-cutoff = 1e-6
+cutoff = 1e-8
 
 ## Construct basis
 idx = 0
@@ -24,7 +24,7 @@ for Lambda in [10000]:
 
     plt.figure(1)
     for l in [0, b.dim()-1]:
-        plt.plot(xvec, numpy.array([numpy.abs(b.ulx(l,x)-b_dp.ulx(l,x)) for x in xvec]), label='l='+str(l))
+        plt.plot(xvec, numpy.array([numpy.abs(b.ulx(l,x)-b_dp.ulx(l,x)) for x in xvec])/numpy.abs(b.ulx(l,1)), label='l='+str(l))
 
     plt.figure(2)
     for l in [0, b.dim()-1]:
@@ -45,7 +45,7 @@ for Lambda in [10000]:
 
 plt.figure(1)
 plt.xlabel('$x$')
-plt.ylabel('Error in $u_l(x)$')
+plt.ylabel('Error in $u_l(x)/u_l(1)$')
 plt.legend()
 plt.yscale("log")
 plt.tight_layout()

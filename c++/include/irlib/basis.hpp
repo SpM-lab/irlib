@@ -14,6 +14,7 @@ namespace irlib {
                 : basis_impl<mpfr::mpreal>(irlib::statistics::FERMIONIC, Lambda, max_dim, cutoff, n_local_poly) {}
     };
 
+    /*
     class basis_f_dp : public basis_impl<double> {
     public:
         basis_f_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-6,
@@ -24,10 +25,11 @@ namespace irlib {
             }
         }
     };
+    */
 
-    class basis_f_ldp : public basis_impl<long double> {
+    class basis_f_dp : public basis_impl<long double> {
     public:
-        basis_f_ldp(double Lambda, int max_dim = 10000, double cutoff = 1e-6,
+        basis_f_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-8,
                    int n_local_poly = 10) throw(std::runtime_error)
                 : basis_impl<long double>(irlib::statistics::FERMIONIC, Lambda, max_dim, cutoff, n_local_poly) {
             if (cutoff < 1e-8) {
@@ -36,15 +38,6 @@ namespace irlib {
         }
     };
 
-
-    /*
-    class basis_f_dp2 : public basis_impl2<double> {
-    public:
-        basis_f_dp2(double Lambda, int max_dim = 10000, double cutoff = 1e-12,
-                   int n_local_poly = 10) throw(std::runtime_error)
-                : basis_impl2<double>(irlib::statistics::FERMIONIC, Lambda, max_dim, cutoff, n_local_poly) {}
-    };
-     */
 
     /**
      * Bosonic IR basis
@@ -56,16 +49,30 @@ namespace irlib {
                 : basis_impl<mpfr::mpreal>(irlib::statistics::BOSONIC, Lambda, max_dim, cutoff, n_local_poly) {}
     };
 
-    class basis_b_dp : public basis_impl<double> {
+    class basis_b_dp : public basis_impl<long double> {
     public:
-        basis_b_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-6,
+        basis_b_dp(double Lambda, int max_dim = 10000, double cutoff = 1e-8,
                    int n_local_poly = 10) throw(std::runtime_error)
-                : basis_impl<double>(irlib::statistics::BOSONIC, Lambda, max_dim, cutoff, n_local_poly) {
+                : basis_impl<long double>(irlib::statistics::BOSONIC, Lambda, max_dim, cutoff, n_local_poly) {
             if (cutoff < 1e-8) {
                 throw std::runtime_error("cutoff cannot be smaller than 1e-8 for double precision version. Please use basis_b!");
             }
 
         }
     };
+
+    /*
+    class basis_b_ldp : public basis_impl<long double> {
+    public:
+        basis_b_ldp(double Lambda, int max_dim = 10000, double cutoff = 1e-6,
+                   int n_local_poly = 10) throw(std::runtime_error)
+                : basis_impl<long double>(irlib::statistics::BOSONIC, Lambda, max_dim, cutoff, n_local_poly) {
+            if (cutoff < 1e-8) {
+                throw std::runtime_error("cutoff cannot be smaller than 1e-8 for double precision version. Please use basis_b!");
+            }
+
+        }
+    };
+     */
 
 }
