@@ -364,15 +364,6 @@ namespace irlib {
         for (int l=0; l<bf_src.size(); ++l) {
             for (int m=0; m<num_tail; ++m) {
                 int sign_lm = (l+m)%2==0 ? 1 : -1;
-/*
-                int sign_m1 = (l+m)%2==0 ? 1 : -1;
-                if (sign_s == sign_m1) {
-                    double am = std::sqrt(2.0) * std::pow(2, m) * (sign_s + sign_m1) * bf_src[l].derivative(1, m);
-                    tails(l,m) = am/std::pow(std::complex<double>(0.0, -1), m+1);
-                } else {
-                    tails(l,m) = 0.0;
-                }
-                */
                 tails(l,m) = - std::sqrt(2.0) * std::pow(2, m) * std::pow(zi, m+1) * static_cast<double>(sign_s - sign_lm) * bf_src[l].derivative(1, m);
             }
         }

@@ -81,6 +81,36 @@ TEST(PiecewisePolynomial, Orthogonalization) {
     EXPECT_NEAR(nfunctions[1].compute_value(x) * std::sqrt(2.0/3.0), x, 1E-8);
 }
 
+TEST(computeTnl, NegativeFreq) {
+    double Lambda = 1000.0;
+
+    {
+        irlib::basis_f_dp bf(Lambda);
+        auto Tnl = bf.compute_Tnl(std::vector<long>{-1, 0});
+        auto Tnl2 = bf.compute_Tnl(std::vector<long>{0, -1});
+        auto l = 0;
+        for (int l=0; l<bf.dim(); ++l) {
+            ASSERT_TRUE(Tnl(0,l) == std::conj(Tnl(1,l)));
+
+            ASSERT_TRUE(Tnl(0,l) == Tnl2(1,l));
+            ASSERT_TRUE(Tnl(1,l) == Tnl2(0,l));
+        }
+    }
+
+    {
+        irlib::basis_b_dp bb(Lambda);
+        auto Tnl = bb.compute_Tnl(std::vector<long>{-1, 1});
+        auto Tnl2 = bb.compute_Tnl(std::vector<long>{1, -1});
+        auto l = 0;
+        for (int l=0; l<bb.dim(); ++l) {
+            ASSERT_TRUE(Tnl(0,l) == std::conj(Tnl(1,l)));
+
+            ASSERT_TRUE(Tnl(0,l) == Tnl2(1,l));
+            ASSERT_TRUE(Tnl(1,l) == Tnl2(0,l));
+        }
+    }
+}
+
 template<class T>
 class HighTTest : public testing::Test {
 };
@@ -131,6 +161,7 @@ TYPED_TEST(HighTTest, BasisTypes) {
     FAIL() << e.what();
   }
 }
+
 
 TEST(ComparisonMPvsDP, Fermion) {
     double Lambda = 1000.0;

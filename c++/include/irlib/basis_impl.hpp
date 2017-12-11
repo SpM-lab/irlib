@@ -172,24 +172,61 @@ namespace irlib {
         /**
          * Compute transformation matrix to Matsubara freq.
          * The computation may take some time. You may store the result somewhere and do not call this routine frequenctly.
-         * @param n_vec  This vector must contain indices of non-negative Matsubara freqencies (i.e., n>=0) in ascending order.
+         * @param n_vec  This vector must contain indices of Matsubara freqencies
          * @param Tnl    Results
          */
         void compute_Tnl(
                 const std::vector<long> &n_vec,
                 Eigen::Tensor<std::complex<double>, 2> &Tnl
         ) const {
-            compute_transformation_matrix_to_matsubara<double>(n_vec,
-                                                                                   statistics_,
-                                                                                   u_basis_,
-                                                                                   Tnl);
+            auto trans_to_non_negative = [&](long n) {
+                if (n >= 0) {
+                    return n;
+                } else {
+                    if (statistics_ == irlib::statistics::FERMIONIC) {
+                        return -n-1;
+                    } else {
+                        return -n;
+                    }
+                }
+            };
+
+            auto nl = dim();
+
+            std::set<long> none_negative_n;
+            for (const auto& n : n_vec) {
+                none_negative_n.insert(trans_to_non_negative(n));
+            }
+
+            Eigen::Tensor<std::complex<double>, 2> Tnl_tmp;
+            compute_transformation_matrix_to_matsubara<double>(
+                    std::vector<long>(none_negative_n.begin(), none_negative_n.end()),
+                    statistics_, u_basis_, Tnl_tmp
+            );
+
+            Tnl = Eigen::Tensor<std::complex<double>, 2>(n_vec.size(), nl);
+            for (int i=0; i<n_vec.size(); ++i) {
+                auto index_data = std::distance(
+                        none_negative_n.begin(),
+                        none_negative_n.find(trans_to_non_negative(n_vec[i]))
+                );
+                if (n_vec[i] >= 0) {
+                    for (int l=0; l<nl; ++l) {
+                        Tnl(i, l) = Tnl_tmp(index_data, l);
+                    }
+                } else {
+                    for (int l=0; l<nl; ++l) {
+                        Tnl(i, l) = std::conj(Tnl_tmp(index_data, l));
+                    }
+                }
+            }
         }
 #endif
 
         /**
          * Compute transformation matrix to Matsubara freq.
          * The computation may take some time. You may store the result somewhere and do not call this routine frequenctly.
-         * @param n_vec  This vector must contain indices of non-negative Matsubara freqencies (i.e., n>=0) in ascending order.
+         * @param n_vec  This vector must contain indices of Matsubara freqencies
          * @return Results
          */
         Eigen::Tensor<std::complex<double>, 2>
@@ -205,16 +242,43 @@ namespace irlib {
          * @param o_vec  This vector must contain o >= in ascending order.
          * @return Results
          */
+         /*
         Eigen::Tensor<std::complex<double>, 2>
         compute_Tbar_ol(const std::vector<long> &o_vec) const {
             int no = o_vec.size();
             int nl = u_basis_.size();
 
-            Eigen::Tensor<std::complex<double>, 2> Tbar_ol(no, nl);
-            irlib::compute_Tbar_ol(o_vec, u_basis_, Tbar_ol);
+            std::set<long> none_negative_o;
 
+            for (const auto& o : o_vec) {
+                none_negative_o.insert(std::abs(o));
+            }
+
+            Eigen::Tensor<std::complex<double>, 2> Tbar_ol_tmp(none_negative_o.size(), nl);
+            irlib::compute_Tbar_ol(
+                    std::vector<long>(none_negative_o.begin(), none_negative_o.end()),
+                    u_basis_, Tbar_ol_tmp
+            );
+
+            Eigen::Tensor<std::complex<double>, 2> Tbar_ol(o_vec.size(), nl);
+            for (int i=0; i<o_vec.size(); ++i) {
+                auto index_data = std::distance(
+                        none_negative_o.begin(),
+                        none_negative_o.find(std::abs(o_vec[i]))
+                );
+                if (o_vec[i] >= 0) {
+                    for (int l=0; l<nl; ++l) {
+                        Tbar_ol(i, l) = Tbar_ol_tmp(index_data, l);
+                    }
+                } else {
+                    for (int l=0; l<nl; ++l) {
+                        Tbar_ol(i, l) = std::conj(Tbar_ol_tmp(index_data, l));
+                    }
+                }
+            }
             return Tbar_ol;
         }
+          */
 
 
     };
