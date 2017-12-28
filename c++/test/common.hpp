@@ -3,9 +3,11 @@
 #include "gtest.h"
 
 #include <mpreal.h>
-#include <irlib/basis.hpp>
 #include <Eigen/Core>
 #include <Eigen/CXX11/Tensor>
+
+#include <irlib/basis.hpp>
+#include <irlib/basis_ng.hpp>
 
 using mpfr::mpreal;
 

@@ -101,5 +101,6 @@ namespace irlib {
     inline mp_prec_t ir_digits2bits(mp_prec_t prec) {
         return mpfr::digits2bits(prec);
     }
+
 }
 

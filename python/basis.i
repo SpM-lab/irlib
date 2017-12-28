@@ -3,6 +3,7 @@
 %{
 #define SWIG_FILE_WITH_INIT
 #include <irlib/basis.hpp>
+#include <irlib/basis_ng.hpp>
 
 using namespace irlib;
 %}
@@ -45,7 +46,9 @@ using namespace irlib;
 %feature("autodoc", "Do not call") alps::gf::index_mesh::compute_points;
  */
 
+%include <irlib/common.hpp>
 %include <irlib/basis_impl.hpp>
 %include <irlib/basis.hpp>
+%include <irlib/basis_ng.hpp>
 
 /* %template(real_piecewise_polynomial) alps::gf::piecewise_polynomial<double>; */

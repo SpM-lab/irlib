@@ -5,6 +5,9 @@
 #include <vector>
 #include <cassert>
 #include <type_traits>
+#include <mpreal.h>
+#include <iomanip>
+#include <fstream>
 
 /**
  * @brief Class representing a pieacewise polynomial and utilities
@@ -475,6 +478,53 @@ namespace irlib {
             r += rvec[p]/(p+1);
         }
         return r;
+    }
+
+    inline std::ostream& operator<<(std::ostream& stream, const piecewise_polynomial<double,mpfr::mpreal>& value) {
+        mpfr_prec_t prec = value.section_edge(0).get_prec();
+
+        stream << prec << std::endl;
+        stream << value.order() << std::endl;
+        stream << value.num_sections() << std::endl;
+
+        for (int i=0; i<value.num_sections()+1; ++i) {
+            stream << std::setprecision(mpfr::bits2digits(prec)) << value.section_edge(i) << std::endl;
+        }
+
+        for (int s=0; s<value.num_sections(); ++s) {
+            for (int i=0; i<value.order()+1; ++i) {
+                stream << value.coefficient(s,i) << std::endl;
+            }
+        }
+
+        return stream;
+    }
+
+    inline std::istream& operator>>(std::istream& stream, piecewise_polynomial<double,mpfr::mpreal>& value) {
+        mpfr_prec_t prec;
+        int k, ns;
+
+        stream >> prec;
+        stream >> k;
+        stream >> ns;
+
+        std::vector<mpfr::mpreal> section_edges(ns+1);
+        for (int i=0; i<ns+1; ++i) {
+            section_edges[i].set_prec(prec);
+            stream >> section_edges[i];
+        }
+
+
+        Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> coeff(ns,k+1);
+        for (int s=0; s<ns; ++s) {
+            for (int i=0; i<k+1; ++i) {
+                stream >> coeff(s, i);
+            }
+        }
+
+        value = piecewise_polynomial<double,mpfr::mpreal>(ns, section_edges, coeff);
+
+        return stream;
     }
 
 }

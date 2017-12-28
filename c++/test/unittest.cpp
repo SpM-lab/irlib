@@ -4,6 +4,25 @@
 
 using namespace irlib;
 
+TEST(basis_new, io) {
+    double Lambda = 100.0;
+
+    basis b = compute_basis(statistics::FERMIONIC, Lambda);
+    savetxt("b_io.txt", b);
+    basis b2 = loadtxt("b_io.txt");
+
+    ASSERT_TRUE(b.dim() == b2.dim());
+
+    double x = 0.99999;
+    double y = 0.00001;
+    double eps = 1e-10;
+    for (int l=0; l<b.dim(); ++l) {
+        ASSERT_NEAR(b.sl(l), b2.sl(l), eps);
+        ASSERT_NEAR(b.ulx(l,x), b2.ulx(l,x), eps);
+        ASSERT_NEAR(b.vly(l,y), b2.vly(l,y), eps);
+    }
+}
+
 TEST(PiecewisePolynomial, Orthogonalization) {
     typedef double Scalar;
     const int n_section = 10, k = 8, n_basis = 3;
@@ -302,4 +321,5 @@ TYPED_TEST(ExpansionByIRBasis, AllBasisTypes) {
 
   }
 }
+
 

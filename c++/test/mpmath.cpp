@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <utility>
+#include <iomanip>
 
 #include <Eigen/MPRealSupport>
 #include <Eigen/SVD>
@@ -97,3 +98,32 @@ TEST(mpmath, normalized_legendre_polynomials_derivatives) {
     ASSERT_TRUE(abs(deriv[2][2]-f1) < 1e-40);
 
 }
+
+/*
+TEST(mpmath, io) {
+    ir_set_default_prec<mpreal>(200);
+
+    mpreal mp_tmp = mpreal("0.000001")/mpreal("3");
+    ir_set_default_prec<mpreal>(20);
+
+    {
+        std::ofstream ofs("mp_math_io.txt");
+        ofs << std::setprecision(mpfr::bits2digits(mp_tmp.get_prec())) << mp_tmp << std::endl;
+        std::cout << std::setprecision(mpfr::bits2digits(mp_tmp.get_prec())) << mp_tmp << std::endl;
+    }
+
+    {
+        mpreal mp_tmp2;
+        std::ifstream ifs("mp_math_io.txt");
+        ir_set_default_prec<mpreal>(20);
+        ifs >> mp_tmp2;
+
+
+        mpreal mp_tmp3 = mpreal("0.000001")/mpreal("3");
+        mpreal diff = mp_tmp - mp_tmp2;
+        std::cout << "diff " << mp_tmp.get_prec() << " " << mp_tmp2.get_prec() << " " << diff.get_prec() << " " << mp_tmp3.get_prec() << std::endl;
+        std::cout << std::setprecision(mpfr::bits2digits(mp_tmp.get_prec())) << mp_tmp - mp_tmp2 << std::endl;
+    }
+
+}
+*/
