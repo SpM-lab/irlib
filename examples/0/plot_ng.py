@@ -13,19 +13,27 @@ N = 1000
 xvec = numpy.linspace(-1, 1, N)
 
 max_dim = 1000
-cutoff = 1e-6 
+cutoff = 1e-10
+a_tol = 1e-10
+prec = 80
+verbose = True
 
 ## Construct basis
 idx = 0
 markers = ['o', 's', 'x', '+']
-for Lambda in [1000]:
+for Lambda in [100]:
     print("Computing basis functions... It may take some time")
-    b = irlib.compute_basis(irlib.FERMIONIC, Lambda, max_dim, cutoff)
+    b = irlib.compute_basis(irlib.FERMIONIC, Lambda, max_dim, cutoff, "mp", a_tol, prec, verbose)
     print("Done!")
 
     # You can save a basis like numpy.savetxt and numpy.loadtxt
-    irlib.savetxt("basis.txt", b)
-    b = irlib.loadtxt("basis.txt")
+    irlib.savetxt("basis_f-mp-Lambda"+str(Lambda)+".txt", b)
+    b = irlib.loadtxt("basis_f-mp-Lambda"+str(Lambda)+".txt")
+
+    for l in range(b.dim()):
+        print(l, "ul(-1)=", b.ulx(l,-1))
+        print(l, "vl(-1)=", b.vly(l,-1))
+        print(l, "vl(0)=", b.vly(l,0))
 
     plt.figure(1)
     for l in [0, b.dim()-1]:

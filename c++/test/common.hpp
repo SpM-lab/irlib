@@ -7,7 +7,6 @@
 #include <Eigen/CXX11/Tensor>
 
 #include <irlib/basis.hpp>
-#include <irlib/basis_ng.hpp>
 
 using mpfr::mpreal;
 

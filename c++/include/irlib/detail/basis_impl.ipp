@@ -6,9 +6,9 @@
 #include <Eigen/CXX11/Tensor>
 
 #include "../piecewise_polynomial.hpp"
-#include "spline.hpp"
 
 namespace irlib {
+
     template<typename mp_type>
     std::vector<std::pair<mp_type, mp_type> >
     composite_gauss_legendre_nodes(
@@ -31,6 +31,7 @@ namespace irlib {
         return all_nodes;
     };
 
+    /*
     template<typename Tx, typename Ty, typename F>
     Ty integrate_gauss_legendre(const std::vector<Tx>& section_edges, const F& f, int num_local_nodes) {
         std::vector<std::pair<Tx, Tx>> nodes = detail::gauss_legendre_nodes<Tx>(num_local_nodes);
@@ -41,7 +42,335 @@ namespace irlib {
         }
         return r;
     };
+     */
 
+    /**
+     * Compute Matrix representation of a given Kernel
+     * @tparam Scalar
+     * @tparam K
+     * @param kernel
+     * @param section_edges_x
+     * @param section_edges_y
+     * @param num_local_nodes
+     * @param num_local_poly
+     * @return Matrix representation
+     */
+    template<typename Scalar, typename K>
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
+    matrix_rep(const K &kernel,
+               const std::vector<mpreal> &section_edges_x,
+               const std::vector<mpreal> &section_edges_y,
+               int num_local_nodes,
+               int num_local_poly) {
+
+        using mpreal_matrix_type = Eigen::Matrix<mpreal, Eigen::Dynamic, Eigen::Dynamic>;
+        using matrix_type = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>;
+
+        int num_sec_x = section_edges_x.size() - 1;
+        int num_sec_y = section_edges_y.size() - 1;
+
+        // nodes for Gauss-Legendre integration
+        std::vector<std::pair<mpreal, mpreal >> nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
+        auto nodes_x = composite_gauss_legendre_nodes(section_edges_x, nodes);
+        auto nodes_y = composite_gauss_legendre_nodes(section_edges_y, nodes);
+
+        std::vector<mpreal_matrix_type> phi_x(num_sec_x);
+        for (int s = 0; s < num_sec_x; ++s) {
+            phi_x[s] = mpreal_matrix_type(num_local_poly, num_local_nodes);
+            for (int n = 0; n < num_local_nodes; ++n) {
+                for (int l = 0; l < num_local_poly; ++l) {
+                    auto leg_val = normalized_legendre_p(l, nodes[n].first);
+                    phi_x[s](l, n) = detail::sqrt<mpreal>(mpreal(2) / (section_edges_x[s + 1] - section_edges_x[s])) * leg_val *
+                                     nodes_x[s * num_local_nodes + n].second;
+                }
+            }
+        }
+
+        std::vector<mpreal_matrix_type> phi_y(num_sec_y);
+        for (int s = 0; s < num_sec_y; ++s) {
+            phi_y[s] = mpreal_matrix_type(num_local_poly, num_local_nodes);
+            for (int n = 0; n < num_local_nodes; ++n) {
+                for (int l = 0; l < num_local_poly; ++l) {
+                    auto leg_val = normalized_legendre_p(l, nodes[n].first);
+                    phi_y[s](l, n) = detail::sqrt<mpreal>(mpreal("2") / (section_edges_y[s + 1] - section_edges_y[s])) * leg_val *
+                                     nodes_y[s * num_local_nodes + n].second;
+                }
+            }
+        }
+
+        matrix_type K_mat(num_sec_x * num_local_poly, num_sec_y * num_local_poly);
+        for (int s2 = 0; s2 < num_sec_y; ++s2) {
+            for (int s = 0; s < num_sec_x; ++s) {
+
+                mpreal_matrix_type K_nn(num_local_nodes, num_local_nodes);
+                for (int n = 0; n < num_local_nodes; ++n) {
+                    for (int n2 = 0; n2 < num_local_nodes; ++n2) {
+                        K_nn(n, n2) = kernel(static_cast<Scalar>(nodes_x[s * num_local_nodes + n].first),
+                                             static_cast<Scalar>(nodes_y[s2 * num_local_nodes + n2].first)
+                        );
+                    }
+                }
+
+                // phi_x(l, n) * K_nn(n, n2) * phi_y(l2, n2)^T
+                mpreal_matrix_type r = phi_x[s] * K_nn * phi_y[s2].transpose();
+
+                for (int l2 = 0; l2 < num_local_poly; ++l2) {
+                    for (int l = 0; l < num_local_poly; ++l) {
+                        K_mat(num_local_poly * s + l, num_local_poly * s2 + l2) = static_cast<Scalar>(r(l, l2));
+                    }
+                }
+            }
+        }
+
+        return K_mat;
+    }
+
+
+    template<typename ScalarType, typename KernelType>
+    std::tuple<
+            std::vector<double>,
+            std::vector<piecewise_polynomial<double,mpreal>>,
+    std::vector<piecewise_polynomial<double,mpreal>>
+    >
+    generate_ir_basis_functions_impl(
+            const KernelType &kernel,
+            int max_dim,
+            double sv_cutoff,
+            int num_local_poly,
+            int num_nodes_gauss_legendre,
+            const std::vector<mpreal> &section_edges_x,
+            const std::vector<mpreal> &section_edges_y,
+            std::vector<double> &residual_x,
+            std::vector<double> &residual_y,
+            bool verbose
+    ) throw(std::runtime_error) {
+        using vector_t = Eigen::Matrix<ScalarType, Eigen::Dynamic, 1>;
+        using matrix_t = Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>;
+        using mp_vector_t = Eigen::Matrix<mpreal, Eigen::Dynamic, 1>;
+        using mp_matrix_t = Eigen::Matrix<mpreal, Eigen::Dynamic, Eigen::Dynamic>;
+
+        if (num_local_poly < 2) {
+            throw std::runtime_error("num_local_poly < 2! : " + std::to_string(num_local_poly));
+        }
+
+        // Compute Kernel matrix and do SVD for even/odd sector
+        if (verbose) {
+            std::cout << "Constructing kernel matrix for even sector ... ";
+        }
+        auto kernel_even = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) + kernel(x, -y); };
+        auto Kmat_even = irlib::matrix_rep<ScalarType>(
+                kernel_even, section_edges_x, section_edges_y, num_nodes_gauss_legendre, num_local_poly
+        );
+        if (verbose) {
+            std::cout << " done " << std::endl;
+            std::cout << "SVD kernel matrix for even sector ... ";
+        }
+        Eigen::BDCSVD<matrix_t> svd_even(Kmat_even, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        if (verbose) {
+            std::cout << " done " << std::endl;
+        }
+
+        if (verbose) {
+            std::cout << "Constructing kernel matrix for odd sector ... ";
+        }
+        auto kernel_odd = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) - kernel(x, -y); };
+        auto Kmat_odd = irlib::matrix_rep<ScalarType>(
+                kernel_odd, section_edges_x, section_edges_y, num_nodes_gauss_legendre, num_local_poly
+        );
+        if (verbose) {
+            std::cout << " done " << std::endl;
+            std::cout << "SVD kernel matrix for odd sector ... ";
+        }
+        Eigen::BDCSVD<matrix_t> svd_odd(Kmat_odd, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        if (verbose) {
+            std::cout << " done " << std::endl;
+        }
+
+        // Pick up singular values and basis functions larger than cutoff
+        std::vector<double> sv;
+        std::vector<vector_t> Uvec, Vvec;
+        auto s0 = svd_even.singularValues()[0];
+        for (int i = 0; i < svd_even.singularValues().size(); ++i) {
+            if (sv.size() == max_dim || svd_even.singularValues()[i] / s0 < sv_cutoff) {
+                break;
+            }
+            sv.push_back(static_cast<double>(svd_even.singularValues()[i]));
+            Uvec.push_back(svd_even.matrixU().col(i));
+            Vvec.push_back(svd_even.matrixV().col(i));
+            if (sv.size() == max_dim || svd_odd.singularValues()[i] / s0 < sv_cutoff) {
+                break;
+            }
+            sv.push_back(static_cast<double>(svd_odd.singularValues()[i]));
+            Uvec.push_back(svd_odd.matrixU().col(i));
+            Vvec.push_back(svd_odd.matrixV().col(i));
+        }
+        assert(sv.size() <= max_dim);
+
+        // Check if singular values are in decreasing order
+        for (int l = 0; l < sv.size() - 1; ++l) {
+            if (sv[l] < sv[l + 1]) {
+                throw std::runtime_error(
+                        "Singular values are not in decreasing order. This may be due to numerical round erros. You may ask for fewer basis functions!");
+            }
+        }
+
+        // Construct basis functions
+        std::vector<std::vector<mpreal>> deriv_xm1 = normalized_legendre_p_derivatives(num_local_poly, mpreal("-1"));
+        std::vector<mpreal> inv_factorial;
+        inv_factorial.push_back(mpreal("1"));
+        for (int l = 1; l < num_local_poly; ++l) {
+            inv_factorial.push_back(inv_factorial.back() / mpreal(std::to_string(l)));
+        }
+
+        auto gen_pp = [&](const std::vector<mpreal> &section_edges, const std::vector<vector_t> &vectors) {
+            std::vector<piecewise_polynomial<double,mpreal>> pp;
+
+            int ns_pp = section_edges.size() - 1;
+            for (int v = 0; v < vectors.size(); ++v) {
+                //mpreal norm = (vectors[v].transpose() * vectors[v])(0, 0);
+                //assert(mpfr::abs(norm - 1) < 1e-8);
+
+                Eigen::MatrixXd coeff(ns_pp, num_local_poly);
+                coeff.setZero();
+                int parity = v % 2 == 0 ? 1 : -1;
+                // loop over sections in [0, 1]
+                for (int s = 0; s < section_edges.size() - 1; ++s) {
+                    // loop over normalized Legendre polynomials
+                    for (int l = 0; l < num_local_poly; ++l) {
+                        mpreal coeff2 = mpreal("1")/mpfr::sqrt(section_edges[s + 1] - section_edges[s]);
+                        // loop over the orders of derivatives
+                        for (int d = 0; d < num_local_poly; ++d) {
+                            mpreal tmp = inv_factorial[d] * coeff2 * vectors[v][s * num_local_poly + l] * deriv_xm1[l][d];
+                            coeff(s, d) += static_cast<double>(tmp);
+                            coeff2 *= mpreal("2")/(section_edges[s + 1] - section_edges[s]);
+                        }
+                    }
+                }
+                pp.push_back(piecewise_polynomial<double,mpreal>(section_edges.size() - 1, section_edges, coeff));
+            }
+
+            return pp;
+        };
+
+        auto u_basis_pp = gen_pp(section_edges_x, Uvec);
+        auto v_basis_pp = gen_pp(section_edges_y, Vvec);
+
+        for (int i = 0; i < u_basis_pp.size(); ++i) {
+            if (u_basis_pp[i].compute_value(1) < 0) {
+                u_basis_pp[i] = -1.0 * u_basis_pp[i];
+                v_basis_pp[i] = -1.0 * v_basis_pp[i];
+            }
+        }
+
+        residual_x.resize(section_edges_x.size() - 1);
+        residual_y.resize(section_edges_y.size() - 1);
+        std::fill(residual_x.begin(), residual_x.end(), 0.0);
+        std::fill(residual_y.begin(), residual_y.end(), 0.0);
+
+        for (int l = 0; l < Uvec.size(); ++l) {
+            for (int s = 0; s < residual_x.size(); ++s) {
+                double dx = static_cast<double>(section_edges_x[s+1]-section_edges_x[s]);
+                double a_diff = static_cast<double>(Uvec[l](s * num_local_poly + num_local_poly - 1)) * std::sqrt((2.*l+1)/dx);
+                residual_x[s] = std::max(residual_x[s], std::abs(a_diff));
+            }
+
+            for (int s = 0; s < residual_y.size(); ++s) {
+                double dy = static_cast<double>(section_edges_y[s+1]-section_edges_y[s]);
+                double a_diff = static_cast<double>(Vvec[l](s * num_local_poly + num_local_poly - 1)) * std::sqrt((2.*l+1)/dy);
+                residual_y[s] = std::max(residual_y[s], std::abs(a_diff));
+            }
+        }
+
+        return std::make_tuple(sv, u_basis_pp, v_basis_pp);
+    }
+
+    template<typename ScalarType, typename KernelType>
+    std::tuple<
+            std::vector<double>,
+            std::vector<piecewise_polynomial<double,mpreal>>,
+    std::vector<piecewise_polynomial<double,mpreal>>
+    >
+    generate_ir_basis_functions(
+            const KernelType &kernel,
+            int max_dim,
+            double sv_cutoff = 1e-12,
+            bool verbose = false,
+            double a_tol = 1e-10,
+            int num_local_poly = 10,
+            int num_nodes_gauss_legendre = 24
+    ) throw(std::runtime_error) {
+        using vector_t = Eigen::Matrix<ScalarType, Eigen::Dynamic, 1>;
+        // Compute approximate positions of nodes of the highest basis function in the even sector
+        std::vector<double> nodes_x, nodes_y;
+        if (verbose){
+            std::cout << "Computing approximate positions of zeros... ";
+            std::tie(nodes_x, nodes_y) = compute_approximate_nodes_even_sector(kernel, 500, std::max(1e-12, sv_cutoff));
+            std::cout << "Done" << std::endl;
+        }
+
+        auto gen_section_edges = [](const std::vector<double> &nodes) {
+            std::vector<mpreal> section_edges;
+            section_edges.push_back(0);
+            for (int i = 0; i < nodes.size(); ++i) {
+                section_edges.push_back(static_cast<mpreal>(nodes[i]));
+            }
+            section_edges.push_back(1);
+            return section_edges;
+        };
+
+        auto u = [](const std::vector<mpreal> &section_edges,
+                    std::vector<double> &residual, double eps) {
+            std::vector<mpreal> section_edges_new(section_edges);
+            for (int s = 0; s < section_edges.size() - 1; ++s) {
+                if (residual[s] > eps) {
+                    section_edges_new.push_back(
+                            (section_edges[s] + section_edges[s + 1]) / 2
+                    );
+                }
+            }
+            std::sort(section_edges_new.begin(), section_edges_new.end());
+            return section_edges_new;
+        };
+
+        std::vector<mpreal> section_edges_x = gen_section_edges(nodes_x);
+        std::vector<mpreal> section_edges_y = gen_section_edges(nodes_y);
+
+        int ite = 0;
+
+        // Sections are split recursively until convergence is reached.
+        while (true) {
+            if (verbose) {
+                std::cout << "Iteration " << ite+1 << " : " << section_edges_x.size()-1 << " sections for x, " << section_edges_y.size()-1 << " sections for y." << std::endl;
+            }
+            std::vector<double> residual_x, residual_y;
+            auto r = generate_ir_basis_functions_impl<ScalarType>(kernel, max_dim, sv_cutoff, num_local_poly, num_nodes_gauss_legendre,
+                    section_edges_x,
+                    section_edges_y,
+                    residual_x,
+                    residual_y,
+                    verbose
+            );
+            int ns = section_edges_x.size() + section_edges_y.size();
+
+            section_edges_x = u(section_edges_x, residual_x, a_tol);
+            section_edges_y = u(section_edges_y, residual_y, a_tol);
+
+            if (verbose) {
+                std::cout << "Iteration " << ite+1 << " : residual for x = " << *std::max_element(residual_x.begin(),residual_x.end()) << std::endl;
+                std::cout << "Iteration " << ite+1 << " : residual for y = " << *std::max_element(residual_y.begin(),residual_y.end()) << std::endl;
+            }
+
+            if (section_edges_x.size() + section_edges_y.size() == ns) {
+                return r;
+            }
+
+            ite += 1;
+        }
+
+    };
+
+
+    /*
     template<typename T, typename Tx>
     piecewise_polynomial<T,Tx> construct_piecewise_polynomial_cspline(
             const std::vector<Tx> &x_array, const std::vector<double> &y_array) {
@@ -67,6 +396,7 @@ namespace irlib {
         piecewise_polynomial<T,Tx> tmp(n_section, x_array, coeff);
         return piecewise_polynomial<T,Tx>(n_section, x_array, coeff);
     };
+     */
 
     template<typename T>
     inline std::vector<T> linspace(T minval, T maxval, int N) {
@@ -128,15 +458,6 @@ namespace irlib {
     struct result_of_overlap<double, double> {
         typedef double value;
     };
-
-    /*
-    template<typename T, typename Tx>
-    void compute_integral_with_exp(
-            const std::vector<double> &w,
-            const std::vector<piecewise_polynomial<T,Tx> > &pp_func,
-            Eigen::Tensor<std::complex<double>, 2> &Tnl
-    );
-    */
 
     /// Construct piecewise polynomials representing exponential functions: exp(i w_i x)
     template<class T, typename Tx>
