@@ -12,6 +12,17 @@
 
 using namespace irlib;
 
+TEST(mpmath, cast) {
+    ir_set_default_prec<mpreal>(167);
+
+    for (int i=0; i<100; ++i) {
+        ASSERT_TRUE(mpreal(i) - mpreal(std::to_string(i)) == 0);
+    }
+
+    ASSERT_TRUE(mpreal(0.5) - mpreal("0.5") == 0);
+
+}
+
 TEST(mpmath, SVD) {
 
     ir_set_default_prec<mpreal>(167);

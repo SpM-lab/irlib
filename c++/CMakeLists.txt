@@ -22,7 +22,7 @@ file(GLOB_RECURSE header_files *.hpp)
 
 if (Testing)
   #testing source files
-  set(unittest_src unittest mpmath kernel)
+  set(unittest_src mpmath expensive_tests)
   foreach(test ${unittest_src})
       add_gtest(${test} test)
   endforeach(test)
