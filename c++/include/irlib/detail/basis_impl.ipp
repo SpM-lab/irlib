@@ -31,7 +31,6 @@ namespace irlib {
         return all_nodes;
     };
 
-    /*
     template<typename Tx, typename Ty, typename F>
     Ty integrate_gauss_legendre(const std::vector<Tx>& section_edges, const F& f, int num_local_nodes) {
         std::vector<std::pair<Tx, Tx>> nodes = detail::gauss_legendre_nodes<Tx>(num_local_nodes);
@@ -42,7 +41,6 @@ namespace irlib {
         }
         return r;
     };
-     */
 
     /**
      * Compute Matrix representation of a given Kernel
@@ -165,7 +163,17 @@ namespace irlib {
             std::cout << " done " << std::endl;
             std::cout << "SVD kernel matrix for even sector ... ";
         }
+        for (int i=0; i<Kmat_even.rows(); ++i) {
+            for (int j=0; j<Kmat_even.cols(); ++j) {
+                std::cout << "Keven " << i << " " << j << " " << std::setprecision(50) << Kmat_even(i,j) << std::endl;
+            }
+        }
         Eigen::BDCSVD<matrix_t> svd_even(Kmat_even, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        for (int i=0; i<svd_even.matrixU().rows(); ++i) {
+            for (int j=0; j<svd_even.matrixU().cols(); ++j) {
+                std::cout << "Uij " << i << " " << j << " " << std::setprecision(50) << svd_even.matrixU()(i,j) << std::endl;
+            }
+        }
         if (verbose) {
             std::cout << " done " << std::endl;
         }
@@ -217,9 +225,9 @@ namespace irlib {
         // Construct basis functions
         std::vector<std::vector<mpreal>> deriv_xm1 = normalized_legendre_p_derivatives(num_local_poly, mpreal("-1"));
         std::vector<mpreal> inv_factorial;
-        inv_factorial.push_back(mpreal("1"));
+        inv_factorial.push_back(mpreal(1));
         for (int l = 1; l < num_local_poly; ++l) {
-            inv_factorial.push_back(inv_factorial.back() / mpreal(std::to_string(l)));
+            inv_factorial.push_back(inv_factorial.back() / mpreal(l));
         }
 
         auto gen_pp = [&](const std::vector<mpreal> &section_edges, const std::vector<vector_t> &vectors) {
@@ -268,9 +276,21 @@ namespace irlib {
         std::fill(residual_y.begin(), residual_y.end(), 0.0);
 
         for (int l = 0; l < Uvec.size(); ++l) {
+            for (int i = 0; i < Uvec[l].rows(); ++i) {
+                std::cout << "U " << l << " " << i << " " << Uvec[l](i) << std::endl;
+            }
+            for (int i = 0; i < Vvec[l].rows(); ++i) {
+                std::cout << "V " << l << " " << i << " " << Vvec[l](i) << std::endl;
+            }
+        }
+
+        for (int l = 0; l < Uvec.size(); ++l) {
             for (int s = 0; s < residual_x.size(); ++s) {
                 double dx = static_cast<double>(section_edges_x[s+1]-section_edges_x[s]);
                 double a_diff = static_cast<double>(Uvec[l](s * num_local_poly + num_local_poly - 1)) * std::sqrt((2.*l+1)/dx);
+                if (a_diff > 1e-10) {
+                    std::cout << "debug " << l << " " << s << " " << s * num_local_poly + num_local_poly - 1 << std::endl;
+                }
                 residual_x[s] = std::max(residual_x[s], std::abs(a_diff));
             }
 

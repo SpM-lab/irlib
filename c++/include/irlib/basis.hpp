@@ -243,16 +243,16 @@ namespace irlib {
 
         // Increase default precision if needed
         auto min_prec = std::max(
-                mpfr::digits2bits(std::log10(1/cutoff))+10,
+                mpfr::digits2bits(std::log10(1/cutoff)+std::log10(1/a_tol)+10),
                 long(64)//At least 19 digits
         );
-        min_prec = std::max(min_prec, mpfr::digits2bits(std::log10(1/a_tol))+10);
+        //min_prec = std::max(min_prec, mpfr::digits2bits(std::log10(1/a_tol))+10);
+        min_prec = std::max(min_prec, prec);
         if (min_prec > mpfr::mpreal::get_default_prec()) {
             mpfr::mpreal::set_default_prec(min_prec);
         }
-        min_prec = std::max(min_prec, prec);
         if (verbose) {
-            std::cout << "Setting default precision to " << min_prec << " bits." << std::endl;
+            std::cout << "Using default precision = " << min_prec << " bits." << std::endl;
         }
 
         if (fp_mode == "mp") {

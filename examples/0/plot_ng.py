@@ -14,7 +14,7 @@ xvec = numpy.linspace(-1, 1, N)
 
 max_dim = 1000
 cutoff = 1e-10
-a_tol = 1e-10
+a_tol = 1e-8
 prec = 80
 verbose = True
 
