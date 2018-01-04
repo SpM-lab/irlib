@@ -321,8 +321,8 @@ namespace irlib {
                 auto k_yx = [&](mpreal y, mpreal x) {return kernel_odd(x,y);};
                 r.second = estimate_residual(v_basis_pp.back(), u_basis_pp.back(), sv.back(), k_yx, num_nodes_gauss_legendre);
             }
-            std::cout << "  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = " << r.first << " for largest l " << std::endl;
-            std::cout << "  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = " << r.second << " for largest l " << std::endl;
+            std::cout << "  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = " << r.first << " for largest l = " << u_basis_pp.size()-1 << std::endl;
+            std::cout << "  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = " << r.second << " for largest l = " << u_basis_pp.size()-1 << std::endl;
         }
 
         residual_x.resize(section_edges_x.size() - 1);

@@ -286,7 +286,7 @@ namespace irlib {
             check_validity();
 #endif
             int section = find_section(x);
-            const double dx = static_cast<double>(x - section_edges_[section]);
+            auto dx = x - section_edges_[section];
 
             std::vector<T> coeff_deriv(k_+1, 0.0);
             for (int p = 0; p < k_+1; ++p) {
@@ -300,7 +300,8 @@ namespace irlib {
                 coeff_deriv[k_] = 0;
             }
 
-            Tx r = 0.0, x_pow = 1.0;
+            Tx r = 0.0;
+            Tx x_pow = 1.0;
             for (int p = 0; p < k_ + 1; ++p) {
                 r += coeff_deriv[p] * x_pow;
                 x_pow *= dx;
