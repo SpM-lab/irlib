@@ -302,7 +302,7 @@ namespace irlib {
         ofs << b.sl_mp(0).get_prec() << std::endl;
         for (int l=0; l<b.dim(); ++l) {
             auto sl = b.sl_mp(l);
-            ofs << std::setprecision(sl.get_prec()) << sl << std::endl;
+            ofs << std::setprecision(mpfr::bits2digits(sl.get_prec())) << sl << std::endl;
         }
         for (int l=0; l<b.dim(); ++l) {
             ofs << b.ul(l);
