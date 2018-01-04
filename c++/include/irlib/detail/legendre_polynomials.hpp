@@ -69,7 +69,7 @@ namespace irlib {
         for (int l1=0; l1<Nl; ++l1) {
             for (int l2=0; l2<Nl; ++l2) {
                 if ((l1+l2)%2 == 0) {
-                    S(l1, l2) = MPREAL(2)/(MPREAL(l1)+MPREAL(l2)+MPREAL(1));
+                    S(l1, l2) = MPREAL(2)/(MPREAL(l1+l2+1));
                 } else {
                     S(l1, l2) = 0.0;
                 }

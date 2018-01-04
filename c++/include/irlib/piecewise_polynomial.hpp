@@ -274,14 +274,14 @@ namespace irlib {
         }
 
         /// Compute the value at x.
-        inline T compute_value(Tx x) const {
+        inline Tx compute_value(Tx x) const {
 #ifndef NDEBUG
             check_validity();
 #endif
             return compute_value(x, find_section(x));
         }
 
-        inline T derivative(Tx x, int order) const {
+        inline Tx derivative(Tx x, int order) const {
 #ifndef NDEBUG
             check_validity();
 #endif
@@ -300,7 +300,7 @@ namespace irlib {
                 coeff_deriv[k_] = 0;
             }
 
-            T r = 0.0, x_pow = 1.0;
+            Tx r = 0.0, x_pow = 1.0;
             for (int p = 0; p < k_ + 1; ++p) {
                 r += coeff_deriv[p] * x_pow;
                 x_pow *= dx;
@@ -309,17 +309,14 @@ namespace irlib {
         }
 
         /// Compute the value at x. x must be in the given section.
-        inline T compute_value(Tx x, int section) const {
+        inline Tx compute_value(Tx x, int section) const {
 #ifndef NDEBUG
             check_validity();
 #endif
             assert (x >= section_edges_[section] && x <= section_edges_[section + 1]);
-            //if (x < section_edges_[section] || (x != section_edges_.back() && x >= section_edges_[section + 1])) {
-                //throw std::runtime_error("The given x is not in the given section.");
-            //}
 
-            const double dx = static_cast<double>(x - section_edges_[section]);
-            T r = 0.0, x_pow = 1.0;
+            auto dx = x - section_edges_[section];
+            Tx r = 0.0, x_pow = 1.0;
             for (int p = 0; p < k_ + 1; ++p) {
                 r += coeff_(section, p) * x_pow;
                 x_pow *= dx;

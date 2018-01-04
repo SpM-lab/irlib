@@ -6,8 +6,8 @@ import irlib
 # Compute basis functions very accurately
 
 max_dim = 1000
-cutoff = 1e-10
-a_tol = 1e-12
+cutoff = 1e-8
+a_tol = 1e-6
 verbose = True
 prec = 64
 
