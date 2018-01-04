@@ -36,9 +36,9 @@ namespace irlib {
          */
         basis(statistics::statistics_type s,
             double Lambda,
-            const std::vector<double> &sv,
-            const std::vector<piecewise_polynomial<double, mpfr::mpreal>> &u_basis,
-            const std::vector<piecewise_polynomial<double, mpfr::mpreal>> &v_basis
+            const std::vector<mpfr::mpreal> &sv,
+            const std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> &u_basis,
+            const std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> &v_basis
         ) throw(std::runtime_error) {
             statistics_ = s;
             Lambda_ = Lambda;
@@ -50,8 +50,8 @@ namespace irlib {
     private:
         statistics::statistics_type statistics_;
         double Lambda_;
-        std::vector<double> sv_;
-        std::vector<piecewise_polynomial<double, mpfr::mpreal>> u_basis_, v_basis_;
+        std::vector<mpfr::mpreal> sv_;
+        std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> u_basis_, v_basis_;
 
     public:
         /**
@@ -60,6 +60,12 @@ namespace irlib {
          * @param val  results
          */
         double sl(int l) const throw(std::runtime_error) {
+            assert(l >= 0 && l < dim());
+            python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
+            return static_cast<double>(sv_[l]);
+        }
+
+        mpfr::mpreal sl_mp(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return sv_[l];
@@ -77,7 +83,7 @@ namespace irlib {
         double ulx(int l, double x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
-            return ulx_mp(l, mpfr::mpreal(x));
+            return static_cast<double>(ulx_mp(l, mpfr::mpreal(x)));
         }
 
         /**
@@ -88,7 +94,7 @@ namespace irlib {
         double vly(int l, double y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
-            return vly_mp(l, mpfr::mpreal(y));
+            return static_cast<double>(vly_mp(l, mpfr::mpreal(y)));
         }
 
         /**
@@ -97,7 +103,7 @@ namespace irlib {
          * @param x  x on [-1,1]
          * @return   The value of u_l(x)
          */
-        double ulx_mp(int l, const mpfr::mpreal &x) const throw(std::runtime_error) {
+        mpfr::mpreal ulx_mp(int l, const mpfr::mpreal &x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -116,7 +122,7 @@ namespace irlib {
          * @param y  y on [-1,1]
          * @return   The value of v_l(y)
          */
-        double vly_mp(int l, const mpfr::mpreal &y) const throw(std::runtime_error) {
+        mpfr::mpreal vly_mp(int l, const mpfr::mpreal &y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
@@ -133,13 +139,13 @@ namespace irlib {
          * @param l l-th basis function
          * @return  reference to the l-th basis function
          */
-        const piecewise_polynomial<double, mpfr::mpreal> &ul(int l) const throw(std::runtime_error) {
+        const piecewise_polynomial<mpfr::mpreal, mpfr::mpreal> &ul(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return u_basis_[l];
         }
 
-        const piecewise_polynomial<double, mpfr::mpreal> &vl(int l) const throw(std::runtime_error) {
+        const piecewise_polynomial<mpfr::mpreal, mpfr::mpreal> &vl(int l) const throw(std::runtime_error) {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             return v_basis_[l];
@@ -188,7 +194,7 @@ namespace irlib {
             }
 
             Eigen::Tensor<std::complex<double>, 2> Tnl_tmp;
-            compute_transformation_matrix_to_matsubara<double>(
+            compute_transformation_matrix_to_matsubara<mpreal>(
                     std::vector<long>(none_negative_n.begin(), none_negative_n.end()),
                     statistics_, u_basis_, Tnl_tmp
             );
@@ -233,13 +239,13 @@ namespace irlib {
                         int max_dim = 1000,
                         double cutoff = 1e-8,
                         const std::string& fp_mode="mp",
-                        double a_tol = 1e-10,
+                        double a_tol = 1e-6,
                         long prec = 64,
                         bool verbose = true
         ) throw(std::runtime_error) {
-        std::vector<double> sv;
-        std::vector<piecewise_polynomial<double, mpfr::mpreal>> u_basis;
-        std::vector<piecewise_polynomial<double, mpfr::mpreal>> v_basis;
+        std::vector<mpfr::mpreal> sv;
+        std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> u_basis;
+        std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> v_basis;
 
         // Increase default precision if needed
         auto min_prec = std::max(
@@ -278,7 +284,7 @@ namespace irlib {
             }
             */
         } else {
-            throw std::runtime_error("Unknown fp_mode " + fp_mode + ". Only 'mp' and 'long double' are supported.");
+            throw std::runtime_error("Unknown fp_mode " + fp_mode + ". Only 'mp' is supported.");
         }
 
         return basis(s, Lambda, sv, u_basis, v_basis);
@@ -287,11 +293,16 @@ namespace irlib {
     inline void savetxt(const std::string& fname, const basis& b) {
         std::ofstream ofs(fname);
 
+        int version = 1;
+        ofs << version << std::endl;
         ofs << b.get_statistics() << std::endl;
         ofs << b.Lambda() << std::endl;
         ofs << b.dim() << std::endl;
+
+        ofs << b.sl_mp(0).get_prec() << std::endl;
         for (int l=0; l<b.dim(); ++l) {
-            ofs << std::setprecision(20) << b.sl(l) << std::endl;
+            auto sl = b.sl_mp(l);
+            ofs << std::setprecision(sl.get_prec()) << sl << std::endl;
         }
         for (int l=0; l<b.dim(); ++l) {
             ofs << b.ul(l);
@@ -308,30 +319,40 @@ namespace irlib {
         double Lambda;
         int dim;
 
-        {
-            int itmp;
-            ifs >> itmp;
-            s = static_cast<statistics::statistics_type>(itmp);
+        int version;
+        ifs >> version;
+
+        if (version == 1) {
+            {
+                int itmp;
+                ifs >> itmp;
+                s = static_cast<statistics::statistics_type>(itmp);
+            }
+            ifs >> Lambda;
+            ifs >> dim;
+
+            mpfr_prec_t prec;
+            ifs >> prec;
+            std::vector<mpfr::mpreal> sv(dim);
+            for (int l=0; l<dim; ++l) {
+                sv[l].set_prec(prec);
+                ifs >> sv[l];
+            }
+
+            std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> u_basis(dim), v_basis(dim);
+
+            for (int l=0; l<dim; ++l) {
+                ifs >> u_basis[l];
+            }
+
+            for (int l=0; l<dim; ++l) {
+                ifs >> v_basis[l];
+            }
+
+            return basis(s, Lambda, sv, u_basis, v_basis);
+        } else {
+            throw std::runtime_error("Version " + std::to_string(version) + " is not supported!");
         }
-        ifs >> Lambda;
-        ifs >> dim;
-
-        std::vector<double> sv(dim);
-        for (int l=0; l<dim; ++l) {
-            ifs >> sv[l];
-        }
-
-        std::vector<piecewise_polynomial<double, mpfr::mpreal>> u_basis(dim), v_basis(dim);
-
-        for (int l=0; l<dim; ++l) {
-            ifs >> u_basis[l];
-        }
-
-        for (int l=0; l<dim; ++l) {
-            ifs >> v_basis[l];
-        }
-
-        return basis(s, Lambda, sv, u_basis, v_basis);
     }
 }
 
