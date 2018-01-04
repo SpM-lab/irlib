@@ -249,7 +249,7 @@ namespace irlib {
 
         // Increase default precision if needed
         auto min_prec = std::max(
-                mpfr::digits2bits(std::log10(1/cutoff)+std::log10(1/a_tol)+10),
+                mpfr::digits2bits(std::log10(1/cutoff)+2*std::log10(1/a_tol)),
                 long(64)//At least 19 digits
         );
         //min_prec = std::max(min_prec, mpfr::digits2bits(std::log10(1/a_tol))+10);
