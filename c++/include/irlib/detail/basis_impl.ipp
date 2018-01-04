@@ -126,9 +126,9 @@ namespace irlib {
 
     template<typename ScalarType, typename KernelType>
     std::tuple<
-            std::vector<double>,
-            std::vector<piecewise_polynomial<double,mpreal>>,
-    std::vector<piecewise_polynomial<double,mpreal>>
+            std::vector<mpreal>,
+            std::vector<piecewise_polynomial<mpreal,mpreal>>,
+            std::vector<piecewise_polynomial<mpreal,mpreal>>
     >
     generate_ir_basis_functions_impl(
             const KernelType &kernel,
@@ -153,7 +153,7 @@ namespace irlib {
 
         // Compute Kernel matrix and do SVD for even/odd sector
         if (verbose) {
-            std::cout << "Constructing kernel matrix for even sector ... ";
+            std::cout << "  Constructing kernel matrix for even sector ... "  << std::flush;
         }
         auto kernel_even = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) + kernel(x, -y); };
         auto Kmat_even = irlib::matrix_rep<ScalarType>(
@@ -161,25 +161,15 @@ namespace irlib {
         );
         if (verbose) {
             std::cout << " done " << std::endl;
-            std::cout << "SVD kernel matrix for even sector ... ";
-        }
-        for (int i=0; i<Kmat_even.rows(); ++i) {
-            for (int j=0; j<Kmat_even.cols(); ++j) {
-                std::cout << "Keven " << i << " " << j << " " << std::setprecision(50) << Kmat_even(i,j) << std::endl;
-            }
+            std::cout << "  SVD kernel matrix for even sector ... " << std::flush;
         }
         Eigen::BDCSVD<matrix_t> svd_even(Kmat_even, Eigen::ComputeFullU | Eigen::ComputeFullV);
-        for (int i=0; i<svd_even.matrixU().rows(); ++i) {
-            for (int j=0; j<svd_even.matrixU().cols(); ++j) {
-                std::cout << "Uij " << i << " " << j << " " << std::setprecision(50) << svd_even.matrixU()(i,j) << std::endl;
-            }
-        }
         if (verbose) {
             std::cout << " done " << std::endl;
         }
 
         if (verbose) {
-            std::cout << "Constructing kernel matrix for odd sector ... ";
+            std::cout << "  Constructing kernel matrix for odd sector ... " << std::flush;
         }
         auto kernel_odd = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) - kernel(x, -y); };
         auto Kmat_odd = irlib::matrix_rep<ScalarType>(
@@ -187,7 +177,7 @@ namespace irlib {
         );
         if (verbose) {
             std::cout << " done " << std::endl;
-            std::cout << "SVD kernel matrix for odd sector ... ";
+            std::cout << "  SVD kernel matrix for odd sector ... " << std::flush;
         }
         Eigen::BDCSVD<matrix_t> svd_odd(Kmat_odd, Eigen::ComputeFullU | Eigen::ComputeFullV);
         if (verbose) {
@@ -195,7 +185,7 @@ namespace irlib {
         }
 
         // Pick up singular values and basis functions larger than cutoff
-        std::vector<double> sv;
+        std::vector<mpfr::mpreal> sv;
         std::vector<vector_t> Uvec, Vvec;
         auto s0 = svd_even.singularValues()[0];
         for (int i = 0; i < svd_even.singularValues().size(); ++i) {
@@ -231,14 +221,14 @@ namespace irlib {
         }
 
         auto gen_pp = [&](const std::vector<mpreal> &section_edges, const std::vector<vector_t> &vectors) {
-            std::vector<piecewise_polynomial<double,mpreal>> pp;
+            std::vector<piecewise_polynomial<mpreal,mpreal>> pp;
 
             int ns_pp = section_edges.size() - 1;
             for (int v = 0; v < vectors.size(); ++v) {
                 //mpreal norm = (vectors[v].transpose() * vectors[v])(0, 0);
                 //assert(mpfr::abs(norm - 1) < 1e-8);
 
-                Eigen::MatrixXd coeff(ns_pp, num_local_poly);
+                Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic> coeff(ns_pp, num_local_poly);
                 coeff.setZero();
                 int parity = v % 2 == 0 ? 1 : -1;
                 // loop over sections in [0, 1]
@@ -249,12 +239,12 @@ namespace irlib {
                         // loop over the orders of derivatives
                         for (int d = 0; d < num_local_poly; ++d) {
                             mpreal tmp = inv_factorial[d] * coeff2 * vectors[v][s * num_local_poly + l] * deriv_xm1[l][d];
-                            coeff(s, d) += static_cast<double>(tmp);
-                            coeff2 *= mpreal("2")/(section_edges[s + 1] - section_edges[s]);
+                            coeff(s, d) += tmp;
+                            coeff2 *= mpreal(2)/(section_edges[s + 1] - section_edges[s]);
                         }
                     }
                 }
-                pp.push_back(piecewise_polynomial<double,mpreal>(section_edges.size() - 1, section_edges, coeff));
+                pp.push_back(piecewise_polynomial<mpreal,mpreal>(section_edges.size() - 1, section_edges, coeff));
             }
 
             return pp;
@@ -265,8 +255,8 @@ namespace irlib {
 
         for (int i = 0; i < u_basis_pp.size(); ++i) {
             if (u_basis_pp[i].compute_value(1) < 0) {
-                u_basis_pp[i] = -1.0 * u_basis_pp[i];
-                v_basis_pp[i] = -1.0 * v_basis_pp[i];
+                u_basis_pp[i] = mpreal(-1.0) * u_basis_pp[i];
+                v_basis_pp[i] = mpreal(-1.0) * v_basis_pp[i];
             }
         }
 
@@ -275,6 +265,7 @@ namespace irlib {
         std::fill(residual_x.begin(), residual_x.end(), 0.0);
         std::fill(residual_y.begin(), residual_y.end(), 0.0);
 
+        /*
         for (int l = 0; l < Uvec.size(); ++l) {
             for (int i = 0; i < Uvec[l].rows(); ++i) {
                 std::cout << "U " << l << " " << i << " " << Uvec[l](i) << std::endl;
@@ -283,14 +274,17 @@ namespace irlib {
                 std::cout << "V " << l << " " << i << " " << Vvec[l](i) << std::endl;
             }
         }
+         */
 
         for (int l = 0; l < Uvec.size(); ++l) {
             for (int s = 0; s < residual_x.size(); ++s) {
                 double dx = static_cast<double>(section_edges_x[s+1]-section_edges_x[s]);
                 double a_diff = static_cast<double>(Uvec[l](s * num_local_poly + num_local_poly - 1)) * std::sqrt((2.*l+1)/dx);
+                /*
                 if (a_diff > 1e-10) {
                     std::cout << "debug " << l << " " << s << " " << s * num_local_poly + num_local_poly - 1 << std::endl;
                 }
+                */
                 residual_x[s] = std::max(residual_x[s], std::abs(a_diff));
             }
 
@@ -306,16 +300,16 @@ namespace irlib {
 
     template<typename ScalarType, typename KernelType>
     std::tuple<
-            std::vector<double>,
-            std::vector<piecewise_polynomial<double,mpreal>>,
-    std::vector<piecewise_polynomial<double,mpreal>>
+            std::vector<mpreal>,
+            std::vector<piecewise_polynomial<mpreal,mpreal>>,
+            std::vector<piecewise_polynomial<mpreal,mpreal>>
     >
     generate_ir_basis_functions(
             const KernelType &kernel,
             int max_dim,
             double sv_cutoff = 1e-12,
             bool verbose = false,
-            double a_tol = 1e-10,
+            double a_tol = 1e-6,
             int num_local_poly = 10,
             int num_nodes_gauss_legendre = 24
     ) throw(std::runtime_error) {
@@ -639,7 +633,7 @@ namespace irlib {
 
             for (int l = 0; l < pp_func.size(); ++l) {
                 for (int p2 = 0; p2 < k + 1; ++p2) {
-                    right_matrix(p2, l) = pp_func[l].coefficient(s, p2);
+                    right_matrix(p2, l) = static_cast<double>(pp_func[l].coefficient(s, p2));
                 }
             }
 
@@ -672,7 +666,6 @@ namespace irlib {
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
         typedef std::complex<double> dcomplex;
-        typedef piecewise_polynomial<std::complex<double>,Tx> pp_type;
         typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
         typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 
@@ -705,7 +698,7 @@ namespace irlib {
         for (int l=0; l<bf_src.size(); ++l) {
             for (int m=0; m<num_tail; ++m) {
                 int sign_lm = (l+m)%2==0 ? 1 : -1;
-                tails(l,m) = - std::sqrt(2.0) * std::pow(2, m) * std::pow(zi, m+1) * static_cast<double>(sign_s - sign_lm) * bf_src[l].derivative(1, m);
+                tails(l,m) = - std::sqrt(2.0) * std::pow(2, m) * std::pow(zi, m+1) * static_cast<double>((sign_s - sign_lm) * bf_src[l].derivative(1, m));
             }
         }
 
@@ -767,7 +760,6 @@ namespace irlib {
             Eigen::Tensor<std::complex<double>, 2> &Tbar_ol
     ) {
         typedef std::complex<double> dcomplex;
-        typedef piecewise_polynomial<std::complex<double>,Tx> pp_type;
         typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
         typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
 

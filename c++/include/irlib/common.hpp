@@ -59,7 +59,7 @@ namespace irlib {
         template<> inline mpfr::mpreal pow<mpreal>(const mpreal& s, const mpreal& p) {return mpfr::pow(s, p);};
     }
 
-    using pp_type = piecewise_polynomial<double,mpreal>;
+    using pp_type = piecewise_polynomial<mpreal,mpreal>;
 
     using MatrixXmp = Eigen::Matrix<mpfr::mpreal,Eigen::Dynamic,Eigen::Dynamic>;
     using MatrixXc = Eigen::Matrix<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>;

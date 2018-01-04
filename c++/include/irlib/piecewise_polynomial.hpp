@@ -31,6 +31,10 @@ namespace irlib {
             return a * b;
         }
 
+        inline mpfr::mpreal outer_product(mpfr::mpreal a, mpfr::mpreal b) {
+            return a * b;
+        }
+
         template<class T>
         std::complex<T>
         outer_product(const std::complex<T> &a, const std::complex<T> &b) {
@@ -348,8 +352,7 @@ namespace irlib {
                 throw std::runtime_error(
                         "Computing overlap between piecewise polynomials with different section edges are not supported");
             }
-            //typedef BOOST_TYPEOF(static_cast<T>(1.0) * static_cast<T2>(1.0)) Tr;
-            typedef decltype(static_cast<T>(1.0) * static_cast<T2>(1.0)) Tr;
+            using Tr = typename std::remove_const<decltype(static_cast<T>(1.0) * static_cast<T2>(1.0))>::type;
 
             const int k = this->order();
             const int k2 = other.order();
@@ -366,8 +369,8 @@ namespace irlib {
 
                 for (int p = 0; p < k + 1; ++p) {
                     for (int p2 = 0; p2 < k2 + 1; ++p2) {
-                        r += detail::outer_product((Tr) coeff_(s, p), (Tr) other.coeff_(s, p2))
-                             * dx_power[p + p2 + 1] / (p + p2 + 1.0);
+                        auto prod =  detail::outer_product((Tr) coeff_(s, p), (Tr) other.coeff_(s, p2));
+                        r += prod * dx_power[p + p2 + 1] / (p + p2 + 1.0);
                     }
                 }
             }
@@ -500,6 +503,30 @@ namespace irlib {
         return stream;
     }
 
+    inline std::ostream& operator<<(std::ostream& stream, const piecewise_polynomial<mpfr::mpreal,mpfr::mpreal>& value) {
+        mpfr_prec_t prec = value.section_edge(0).get_prec();
+
+        if (prec != value.coefficient(0,0).get_prec()) {
+            throw std::runtime_error("All mpreal values in a piecewise polynomial must have the same precision.");
+        }
+
+        stream << prec << std::endl;
+        stream << value.order() << std::endl;
+        stream << value.num_sections() << std::endl;
+
+        for (int i=0; i<value.num_sections()+1; ++i) {
+            stream << std::setprecision(mpfr::bits2digits(prec)) << value.section_edge(i) << std::endl;
+        }
+
+        for (int s=0; s<value.num_sections(); ++s) {
+            for (int i=0; i<value.order()+1; ++i) {
+                stream << std::setprecision(mpfr::bits2digits(prec)) << value.coefficient(s,i) << std::endl;
+            }
+        }
+
+        return stream;
+    }
+
     inline std::istream& operator>>(std::istream& stream, piecewise_polynomial<double,mpfr::mpreal>& value) {
         mpfr_prec_t prec;
         int k, ns;
@@ -523,6 +550,33 @@ namespace irlib {
         }
 
         value = piecewise_polynomial<double,mpfr::mpreal>(ns, section_edges, coeff);
+
+        return stream;
+    }
+
+    inline std::istream& operator>>(std::istream& stream, piecewise_polynomial<mpfr::mpreal,mpfr::mpreal>& value) {
+        mpfr_prec_t prec;
+        int k, ns;
+
+        stream >> prec;
+        stream >> k;
+        stream >> ns;
+
+        std::vector<mpfr::mpreal> section_edges(ns+1);
+        for (int i=0; i<ns+1; ++i) {
+            section_edges[i].set_prec(prec);
+            stream >> section_edges[i];
+        }
+
+
+        Eigen::Matrix<mpfr::mpreal,Eigen::Dynamic,Eigen::Dynamic> coeff(ns,k+1);
+        for (int s=0; s<ns; ++s) {
+            for (int i=0; i<k+1; ++i) {
+                stream >> coeff(s, i);
+            }
+        }
+
+        value = piecewise_polynomial<mpfr::mpreal,mpfr::mpreal>(ns, section_edges, coeff);
 
         return stream;
     }

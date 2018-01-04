@@ -101,10 +101,10 @@ TEST(kernel, transformation_to_matsubara) {
     int ns = 1000;
     int k = 4;
 
-    Eigen::MatrixXd coeff(ns, k + 1);
+    MatrixXmp coeff(ns, k + 1);
     coeff.setZero();
     for (int s = 0; s < ns; ++s) {
-        coeff(s, 0) = std::sqrt(0.5);
+        coeff(s, 0) = mpfr::sqrt(mpreal("0.5"));
     }
 
     auto section_edges = linspace<mpreal>(mpreal(0.0), mpreal(1.0), ns + 1);
@@ -114,10 +114,10 @@ TEST(kernel, transformation_to_matsubara) {
     auto n = 10000000000;
     std::vector<long> n_vec{n};
     Eigen::Tensor<std::complex<double>, 2> Tnl;
-    compute_transformation_matrix_to_matsubara<double>(n_vec, statistics::FERMIONIC, u_basis, Tnl);
+    compute_transformation_matrix_to_matsubara<mpfr::mpreal>(n_vec, statistics::FERMIONIC, u_basis, Tnl);
 
     auto jump = 2 * u_basis[0].compute_value(1.0);
-    auto ref = jump * std::sqrt(2.0) / ((2 * n + 1) * M_PI);
+    auto ref = static_cast<double>(jump * std::sqrt(2.0) / ((2 * n + 1) * M_PI));
     ASSERT_NEAR(Tnl(0, 0).imag() / ref, 1.0, 1e-8);
 }
 
@@ -129,52 +129,50 @@ TEST(kernel, basis_functions) {
 
     fermionic_kernel<mpreal> kernel(Lambda);
 
-    std::vector<double> sv;
+    std::vector<mpreal> sv;
     std::vector<pp_type> u_basis, v_basis;
     std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpreal>(kernel, max_dim, 1e-12);
 
     // Check singular values
-    ASSERT_NEAR(sv[0], 0.205608636, 1e-8);
-    ASSERT_NEAR(sv[1], 0.175556428, 1e-8);
-    ASSERT_NEAR(sv[18], 2.30686654e-06, 1e-13);
-    ASSERT_NEAR(sv[28], 1.42975303e-10, 1e-18);
-    ASSERT_NEAR(sv[29], 4.85605434e-11, 1e-18);
+    ASSERT_NEAR(static_cast<double>(sv[0]), 0.205608636, 1e-8);
+    ASSERT_NEAR(static_cast<double>(sv[1]), 0.175556428, 1e-8);
+    ASSERT_NEAR(static_cast<double>(sv[18]), 2.30686654e-06, 1e-13);
+    ASSERT_NEAR(static_cast<double>(sv[28]), 1.42975303e-10, 1e-18);
+    ASSERT_NEAR(static_cast<double>(sv[29]), 4.85605434e-11, 1e-18);
 
     double x = 0.111111;
     int parity = 1;
     for (int l = 0; l < sv.size(); ++l) {
-        //ASSERT_TRUE(std::abs(u_basis[l].compute_value(x) - parity * u_basis[l].compute_value(-x)) < 1e-10);
-        //ASSERT_TRUE(std::abs(v_basis[l].compute_value(x) - parity * v_basis[l].compute_value(-x)) < 1e-10);
-        ASSERT_NEAR(u_basis[l].overlap(u_basis[l]), 0.5, 1e-10);
-        ASSERT_NEAR(v_basis[l].overlap(v_basis[l]), 0.5, 1e-10);
+        ASSERT_NEAR(static_cast<double>(u_basis[l].overlap(u_basis[l])), 0.5, 1e-10);
+        ASSERT_NEAR(static_cast<double>(v_basis[l].overlap(v_basis[l])), 0.5, 1e-10);
         parity *= -1;
     }
 
     for (int l = 0; l < sv.size() - 2; l += 2) {
-        ASSERT_NEAR(u_basis[l].overlap(u_basis[l + 2]), 0.0, 1e-10);
-        ASSERT_NEAR(v_basis[l].overlap(v_basis[l + 2]), 0.0, 1e-10);
+        ASSERT_NEAR(static_cast<double>(u_basis[l].overlap(u_basis[l + 2])), 0.0, 1e-10);
+        ASSERT_NEAR(static_cast<double>(v_basis[l].overlap(v_basis[l + 2])), 0.0, 1e-10);
     }
 
     // l=16 and x=0.5
-    ASSERT_NEAR(u_basis[16].compute_value(0.5) / u_basis[16].compute_value(1.0), 0.129752287857, 1e-8);
-    ASSERT_NEAR(v_basis[16].compute_value(0.5) / v_basis[16].compute_value(1.0), 0.0619868246037, 1e-8);
+    ASSERT_NEAR(static_cast<double>(u_basis[16].compute_value(0.5) / u_basis[16].compute_value(1.0)), 0.129752287857, 1e-8);
+    ASSERT_NEAR(static_cast<double>(v_basis[16].compute_value(0.5) / v_basis[16].compute_value(1.0)), 0.0619868246037, 1e-8);
 
     // l=19 and x=0.5
-    ASSERT_NEAR(u_basis[19].compute_value(0.5) / u_basis[19].compute_value(1.0), -0.105239562038, 1e-8);
-    ASSERT_NEAR(v_basis[19].compute_value(0.5) / v_basis[19].compute_value(1.0), -0.378649485397, 1e-8);
+    ASSERT_NEAR(static_cast<double>(u_basis[19].compute_value(0.5) / u_basis[19].compute_value(1.0)), -0.105239562038, 1e-8);
+    ASSERT_NEAR(static_cast<double>(v_basis[19].compute_value(0.5) / v_basis[19].compute_value(1.0)), -0.378649485397, 1e-8);
 
     auto n = 10000000000;
     std::vector<long> n_vec{n};
     Eigen::Tensor<std::complex<double>, 2> Tnl;
-    compute_transformation_matrix_to_matsubara<double>(n_vec, statistics::FERMIONIC, u_basis, Tnl);
+    compute_transformation_matrix_to_matsubara<mpreal>(n_vec, statistics::FERMIONIC, u_basis, Tnl);
 
     for (int l = 0; l < u_basis.size(); ++l) {
         if (l % 2 == 0) {
             auto jump = 2 * u_basis[l].compute_value(1.0);
             auto ref = jump * std::sqrt(2.0) / ((2 * n + 1) * M_PI);
-            ASSERT_NEAR(Tnl(0, l).imag() / ref, 1.0, 1e-8);
+            ASSERT_NEAR(static_cast<double>(Tnl(0, l).imag() / ref), 1.0, 1e-8);
         } else {
-            ASSERT_NEAR(Tnl(0, l).imag(), 0.0, 1e-10);
+            ASSERT_NEAR(static_cast<double>(Tnl(0, l).imag()), 0.0, 1e-10);
         }
     }
 }
@@ -312,25 +310,10 @@ TEST(PiecewisePolynomial, Orthogonalization) {
 }
 
 TEST(computeTnl, NegativeFreq) {
-    double Lambda = 1000.0;
+    double Lambda = 10.0;
 
     {
-        auto bf = compute_basis(statistics::FERMIONIC, Lambda, 1000, 1e-8, "long doule");
-        //irlib::basis_f_dp bf(Lambda);
-        auto Tnl = bf.compute_Tnl(std::vector<long>{-1, 0});
-        auto Tnl2 = bf.compute_Tnl(std::vector<long>{0, -1});
-        auto l = 0;
-        for (int l = 0; l < bf.dim(); ++l) {
-            ASSERT_TRUE(Tnl(0, l) == std::conj(Tnl(1, l)));
-
-            ASSERT_TRUE(Tnl(0, l) == Tnl2(1, l));
-            ASSERT_TRUE(Tnl(1, l) == Tnl2(0, l));
-        }
-    }
-
-    {
-        //irlib::basis_b_dp bb(Lambda);
-        auto bb = compute_basis(statistics::BOSONIC, Lambda, 1000, 1e-8, "long doule");
+        auto bb = compute_basis(statistics::BOSONIC, Lambda, 1000, 1e-8, "mp");
         auto Tnl = bb.compute_Tnl(std::vector<long>{-1, 1});
         auto Tnl2 = bb.compute_Tnl(std::vector<long>{1, -1});
         auto l = 0;
@@ -400,13 +383,12 @@ INSTANTIATE_TEST_CASE_P(FermionBosonStatistics, TestAllStatistics,
                                           statistics::statistics_type::BOSONIC));
 
 
+/*
 TEST(ComparisonMPvsDP, Fermion) {
     double Lambda = 1000.0;
     int max_dim = 10000;
     auto basis_mp = compute_basis(statistics::FERMIONIC, Lambda, 1000, 1e-6, "mp");
     auto basis_dp = compute_basis(statistics::FERMIONIC, Lambda, 1000, 1e-6, "long double");
-    //irlib::basis_f basis_mp(Lambda, max_dim, 1e-6);
-    //irlib::basis_f_dp basis_dp(Lambda, max_dim, 1e-6);
     double tol = 1e-5;
 
     int Nl = std::min(basis_mp.dim(), basis_dp.dim());
@@ -422,6 +404,7 @@ TEST(ComparisonMPvsDP, Fermion) {
         }
     }
 }
+*/
 
 template<class T>
 class ExpansionByIRBasis : public testing::Test {
@@ -435,9 +418,9 @@ TEST(ExpansionByIRBasis, AllBasisTypes) {
     double cutoff = 1e-8;
     int max_dim = 1000;
 
-    for (auto fp_mode : std::vector<std::string>{"mp", "long double"}) {
+    for (auto fp_mode : std::vector<std::string>{"mp"}) {
         for (auto statis : std::vector<statistics::statistics_type>{statistics::FERMIONIC,statistics::BOSONIC}) {
-            for (auto beta : std::vector<double>{100.0, 10000.0}) {
+            for (auto beta : std::vector<double>{100.0}) {
                 double Lambda = 3 * beta;
                 int max_dim = 10000;
                 double w_positive_pole = 0.6;
@@ -445,7 +428,6 @@ TEST(ExpansionByIRBasis, AllBasisTypes) {
 
                 auto b = compute_basis(statis, max_dim, Lambda, cutoff, fp_mode);
 
-                //TypeParam  basis(Lambda, max_dim, 1e-8);
                 ASSERT_TRUE(b.dim() > 0);
 
                 double tol = 1e-7;
@@ -509,7 +491,7 @@ TEST(ExpansionByIRBasis, AllBasisTypes) {
                 std::vector<double> y_r(nptr, 0.0);
                 for (int l = 0; l < b.dim(); ++l) {
                     for (int i = 0; i < nptr; ++i) {
-                        y_r[i] += coeff[l] * (std::sqrt(2.0) / beta) * b.ulx_mp(l, x[i]);
+                        y_r[i] += static_cast<double>(coeff[l] * (std::sqrt(2.0) / beta) * b.ulx_mp(l, x[i]));
                     }
                 }
 
