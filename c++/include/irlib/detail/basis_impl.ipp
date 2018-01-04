@@ -123,6 +123,72 @@ namespace irlib {
         return K_mat;
     }
 
+    /**
+     * Estimate absolute errors in ulx and vly by computing the residual of the integral equation
+     *   r(x) = u(x) - s^{-1} ¥int_0^1 K(x,y) v(y) dy
+     *   This returns an estimate of max_x |r(x)|
+     * @tparam K
+     * @param ux defined on [0, 1]
+     * @param vy defined on [0, 1]
+     * @param kernel a function of (x, y)
+     * @return residual for ux
+     */
+    template<typename T, typename K>
+    double estimate_residual(const piecewise_polynomial<T,T>& ux, const piecewise_polynomial<T,T>& vy, T s, const K& kernel, int num_local_nodes) {
+        auto section_edges_x = ux.section_edges();
+        auto section_edges_y = vy.section_edges();
+
+        std::cout << "section_edges_x " << section_edges_x.size() << " " << section_edges_x[0] << " " << section_edges_x.back() << std::endl;
+        std::cout << "section_edges_Y " << section_edges_y.size() << " " << section_edges_y[0] << " " << section_edges_y.back() << std::endl;
+        auto local_nodes = detail::gauss_legendre_nodes<mpfr::mpreal>(num_local_nodes);
+        auto nodes_y = composite_gauss_legendre_nodes(section_edges_y, local_nodes);
+
+        // Now we compute residual for u_l(x)
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+        double residual_x = 0.0;
+        for (auto i = 0; i < section_edges_x.size()-1; ++i) {
+            auto x = (section_edges_x[i+1] + section_edges_x[i])/2;
+            mpfr::mpreal sum(0);
+            for (int n=0; n < nodes_y.size(); ++n) {
+                auto y = nodes_y[n].first;
+                auto w = nodes_y[n].second;
+                if (i==0) {
+                    std::cout << "n = " << y << " " << w << " " << kernel(x, y) << " " << vy.compute_value(y) << std::endl;
+                }
+                sum += w * kernel(x,y) * vy.compute_value(y);
+            }
+            auto diff = mpfr::abs(sum/s - ux.compute_value(x));
+            std::cout << "x " << x << " " << sum/s << " " << ux.compute_value(x) << " " << diff << " " << s << std::endl;
+            residual_x = std::max(residual_x, static_cast<double>(diff));
+        }
+
+        return residual_x;
+    }
+
+    template<typename SVD>
+    void check_SVD(const MatrixXmp& Kmat_even, const SVD& svd_even) {
+        MatrixXmp S(svd_even.matrixU().cols(), svd_even.matrixV().cols());
+        MatrixXmp invS(svd_even.matrixU().cols(), svd_even.matrixV().cols());
+        S.setZero();
+        invS.setZero();
+        for (int l=0; l<svd_even.singularValues().rows(); ++l) {
+            S(l,l) = svd_even.singularValues()[l];
+            invS(l,l) = 1/svd_even.singularValues()[l];
+        }
+        for (int l=0; l<svd_even.matrixV().cols(); ++l) {
+            MatrixXmp diff = (Kmat_even * svd_even.matrixV().col(l))/svd_even.singularValues()[l] - svd_even.matrixU().col(l);
+            std::cout << "Residual of SVD at l = " << l << " " << diff(l,0) << " " << svd_even.singularValues()[l] << std::endl;
+        }
+        /*
+         * MatrixXmp diff = Kmat_even - svd_even.matrixU() * S * svd_even.matrixV().transpose();
+        for (int l=0; l<std::min(diff.rows(), diff.cols()); ++l) {
+            std::cout << "Residual of SVD at l = " << l << " " << diff(l,l) << std::endl;
+        }
+         */
+    }
+
 
     template<typename ScalarType, typename KernelType>
     std::tuple<
@@ -163,9 +229,21 @@ namespace irlib {
             std::cout << " done " << std::endl;
             std::cout << "  SVD kernel matrix for even sector ... " << std::flush;
         }
-        Eigen::BDCSVD<matrix_t> svd_even(Kmat_even, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        Eigen::JacobiSVD<matrix_t> svd_even(Kmat_even, Eigen::ComputeThinU | Eigen::ComputeThinV);
         if (verbose) {
+            check_SVD(Kmat_even, svd_even);
             std::cout << " done " << std::endl;
+            /*
+            MatrixXmp S(svd_even.matrixU().cols(), svd_even.matrixV().cols());
+            S.setZero();
+            for (int l=0; l<svd_even.singularValues().rows(); ++l) {
+                S(l,l) = svd_even.singularValues()[l];
+            }
+            MatrixXmp diff = Kmat_even - svd_even.matrixU() * S * svd_even.matrixV().transpose();
+            for (int l=0; l<std::min(diff.rows(), diff.cols()); ++l) {
+                std::cout << "diff l = " << l << " " << diff(l,l) << std::endl;
+            }
+             */
         }
 
         if (verbose) {
@@ -179,8 +257,9 @@ namespace irlib {
             std::cout << " done " << std::endl;
             std::cout << "  SVD kernel matrix for odd sector ... " << std::flush;
         }
-        Eigen::BDCSVD<matrix_t> svd_odd(Kmat_odd, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        Eigen::JacobiSVD<matrix_t> svd_odd(Kmat_odd, Eigen::ComputeThinU | Eigen::ComputeThinV);
         if (verbose) {
+            check_SVD(Kmat_odd, svd_odd);
             std::cout << " done " << std::endl;
         }
 
@@ -192,13 +271,13 @@ namespace irlib {
             if (sv.size() == max_dim || svd_even.singularValues()[i] / s0 < sv_cutoff) {
                 break;
             }
-            sv.push_back(static_cast<double>(svd_even.singularValues()[i]));
+            sv.push_back(svd_even.singularValues()[i]);
             Uvec.push_back(svd_even.matrixU().col(i));
             Vvec.push_back(svd_even.matrixV().col(i));
             if (sv.size() == max_dim || svd_odd.singularValues()[i] / s0 < sv_cutoff) {
                 break;
             }
-            sv.push_back(static_cast<double>(svd_odd.singularValues()[i]));
+            sv.push_back(svd_odd.singularValues()[i]);
             Uvec.push_back(svd_odd.matrixU().col(i));
             Vvec.push_back(svd_odd.matrixV().col(i));
         }
@@ -225,9 +304,6 @@ namespace irlib {
 
             int ns_pp = section_edges.size() - 1;
             for (int v = 0; v < vectors.size(); ++v) {
-                //mpreal norm = (vectors[v].transpose() * vectors[v])(0, 0);
-                //assert(mpfr::abs(norm - 1) < 1e-8);
-
                 Eigen::Matrix<mpreal,Eigen::Dynamic,Eigen::Dynamic> coeff(ns_pp, num_local_poly);
                 coeff.setZero();
                 int parity = v % 2 == 0 ? 1 : -1;
@@ -235,7 +311,7 @@ namespace irlib {
                 for (int s = 0; s < section_edges.size() - 1; ++s) {
                     // loop over normalized Legendre polynomials
                     for (int l = 0; l < num_local_poly; ++l) {
-                        mpreal coeff2 = mpreal("1")/mpfr::sqrt(section_edges[s + 1] - section_edges[s]);
+                        mpreal coeff2 = mpreal(1)/mpfr::sqrt(section_edges[s + 1] - section_edges[s]);
                         // loop over the orders of derivatives
                         for (int d = 0; d < num_local_poly; ++d) {
                             mpreal tmp = inv_factorial[d] * coeff2 * vectors[v][s * num_local_poly + l] * deriv_xm1[l][d];
@@ -260,31 +336,33 @@ namespace irlib {
             }
         }
 
+        std::pair<double,double> r;
+        if (u_basis_pp.size()%2 == 0) {
+            std::cout << "even debug ux" << u_basis_pp.size() << v_basis_pp.size() << std::endl;
+            r.first = estimate_residual(u_basis_pp.back(), v_basis_pp.back(), sv.back(), kernel_even, 2*num_nodes_gauss_legendre);
+            std::cout << "debug vy" << u_basis_pp.size() << std::endl;
+            auto k_yx = [&](mpreal y, mpreal x) {return kernel_even(x,y);};
+            r.second = estimate_residual(v_basis_pp.back(), u_basis_pp.back(), sv.back(), k_yx, 2*num_nodes_gauss_legendre);
+        } else {
+            for (int l=0; l<u_basis_pp.size(); l += 2) {
+                std::cout << "debug l=" << l << std::endl;
+                r.first = estimate_residual(u_basis_pp[l], v_basis_pp[l], sv[l], kernel_odd, 2*num_nodes_gauss_legendre);
+                std::cout << "debug vy" << u_basis_pp.size() << std::endl;
+                auto k_yx = [&](mpreal y, mpreal x) {return kernel_odd(x,y);};
+                r.second = estimate_residual(v_basis_pp[l], u_basis_pp[l], sv[l], k_yx, 2*num_nodes_gauss_legendre);
+            }
+        }
+        std::cout << "debug " << r.first << " " << r.second << std::endl;
+
         residual_x.resize(section_edges_x.size() - 1);
         residual_y.resize(section_edges_y.size() - 1);
         std::fill(residual_x.begin(), residual_x.end(), 0.0);
         std::fill(residual_y.begin(), residual_y.end(), 0.0);
 
-        /*
-        for (int l = 0; l < Uvec.size(); ++l) {
-            for (int i = 0; i < Uvec[l].rows(); ++i) {
-                std::cout << "U " << l << " " << i << " " << Uvec[l](i) << std::endl;
-            }
-            for (int i = 0; i < Vvec[l].rows(); ++i) {
-                std::cout << "V " << l << " " << i << " " << Vvec[l](i) << std::endl;
-            }
-        }
-         */
-
         for (int l = 0; l < Uvec.size(); ++l) {
             for (int s = 0; s < residual_x.size(); ++s) {
                 double dx = static_cast<double>(section_edges_x[s+1]-section_edges_x[s]);
                 double a_diff = static_cast<double>(Uvec[l](s * num_local_poly + num_local_poly - 1)) * std::sqrt((2.*l+1)/dx);
-                /*
-                if (a_diff > 1e-10) {
-                    std::cout << "debug " << l << " " << s << " " << s * num_local_poly + num_local_poly - 1 << std::endl;
-                }
-                */
                 residual_x[s] = std::max(residual_x[s], std::abs(a_diff));
             }
 
@@ -962,4 +1040,5 @@ namespace irlib {
 
         return std::make_pair(nodes_x, nodes_y);
     }
+
 }

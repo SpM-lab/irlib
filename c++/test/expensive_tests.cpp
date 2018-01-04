@@ -121,6 +121,25 @@ TEST(kernel, transformation_to_matsubara) {
     ASSERT_NEAR(Tnl(0, 0).imag() / ref, 1.0, 1e-8);
 }
 
+TEST(basis, Lambda100) {
+    double Lambda = 100.0;
+
+    basis b = compute_basis(statistics::FERMIONIC, Lambda);
+    savetxt("b_io.txt", b);
+    basis b2 = loadtxt("b_io.txt");
+
+    ASSERT_TRUE(b.dim() == b2.dim());
+
+    double x = 0.99999;
+    double y = 0.00001;
+    double eps = 1e-10;
+    for (int l = 0; l < b.dim(); ++l) {
+        ASSERT_NEAR(b.sl(l), b2.sl(l), eps);
+        ASSERT_NEAR(b.ulx(l, x), b2.ulx(l, x), eps);
+        ASSERT_NEAR(b.vly(l, y), b2.vly(l, y), eps);
+    }
+}
+
 TEST(kernel, basis_functions) {
     ir_set_default_prec<mpreal>(169);
 
@@ -212,29 +231,13 @@ TEST(kernel, Ik) {
     ASSERT_TRUE(std::abs((I3 - Ik[3]) / I3) < 1e-8);
 }
 
-TEST(basis_new, io) {
-    double Lambda = 100.0;
-
-    basis b = compute_basis(statistics::FERMIONIC, Lambda);
-    savetxt("b_io.txt", b);
-    basis b2 = loadtxt("b_io.txt");
-
-    ASSERT_TRUE(b.dim() == b2.dim());
-
-    double x = 0.99999;
-    double y = 0.00001;
-    double eps = 1e-10;
-    for (int l = 0; l < b.dim(); ++l) {
-        ASSERT_NEAR(b.sl(l), b2.sl(l), eps);
-        ASSERT_NEAR(b.ulx(l, x), b2.ulx(l, x), eps);
-        ASSERT_NEAR(b.vly(l, y), b2.vly(l, y), eps);
-    }
-}
 
 TEST(PiecewisePolynomial, Orthogonalization) {
     typedef double Scalar;
     const int n_section = 10, k = 8, n_basis = 3;
     typedef irlib::piecewise_polynomial<Scalar, mpreal> pp_type;
+
+    ir_set_default_prec<mpreal>(167);
 
     std::vector<mpreal> section_edges(n_section + 1);
     Eigen::Tensor<Scalar, 3> coeff(n_basis, n_section, k + 1);
@@ -272,13 +275,13 @@ TEST(PiecewisePolynomial, Orthogonalization) {
     // Check if correctly constructed
     double x = 0.9;
     for (int n = 0; n < n_basis; ++n) {
-        EXPECT_NEAR(nfunctions[n].compute_value(x), std::pow(x, n), 1e-8);
+        EXPECT_NEAR(static_cast<double>(nfunctions[n].compute_value(x)), std::pow(x, n), 1e-8);
     }
 
     // Check overlap
     for (int n = 0; n < n_basis; ++n) {
         for (int m = 0; m < n_basis; ++m) {
-            EXPECT_NEAR(nfunctions[n].overlap(nfunctions[m]),
+            EXPECT_NEAR(static_cast<double>(nfunctions[n].overlap(nfunctions[m])),
                         (std::pow(1.0, n + m + 1) - std::pow(-1.0, n + m + 1)) / (n + m + 1), 1e-8);
         }
     }
@@ -286,19 +289,19 @@ TEST(PiecewisePolynomial, Orthogonalization) {
 
     // Check plus and minus
     for (int n = 0; n < n_basis; ++n) {
-        EXPECT_NEAR(4 * nfunctions[n].compute_value(x), (4.0 * nfunctions[n]).compute_value(x), 1e-8);
+        EXPECT_NEAR(static_cast<double>(4 * nfunctions[n].compute_value(x)), static_cast<double>((4.0 * nfunctions[n]).compute_value(x)), 1e-8);
         for (int m = 0; m < n_basis; ++m) {
-            EXPECT_NEAR(nfunctions[n].compute_value(x) + nfunctions[m].compute_value(x),
-                        (nfunctions[n] + nfunctions[m]).compute_value(x), 1e-8);
-            EXPECT_NEAR(nfunctions[n].compute_value(x) - nfunctions[m].compute_value(x),
-                        (nfunctions[n] - nfunctions[m]).compute_value(x), 1e-8);
+            EXPECT_NEAR(static_cast<double>(nfunctions[n].compute_value(x) + nfunctions[m].compute_value(x)),
+                        static_cast<double>((nfunctions[n] + nfunctions[m]).compute_value(x)), 1e-8);
+            EXPECT_NEAR(static_cast<double>(nfunctions[n].compute_value(x) - nfunctions[m].compute_value(x)),
+                        static_cast<double>((nfunctions[n] - nfunctions[m]).compute_value(x)), 1e-8);
         }
     }
 
     irlib::orthonormalize(nfunctions);
     for (int n = 0; n < n_basis; ++n) {
         for (int m = 0; m < n_basis; ++m) {
-            EXPECT_NEAR(nfunctions[n].overlap(nfunctions[m]),
+            EXPECT_NEAR(static_cast<double>(nfunctions[n].overlap(nfunctions[m])),
                         n == m ? 1.0 : 0.0,
                         1e-8
             );
@@ -306,8 +309,10 @@ TEST(PiecewisePolynomial, Orthogonalization) {
     }
 
     //l = 0 should be x
-    EXPECT_NEAR(nfunctions[1].compute_value(x) * std::sqrt(2.0 / 3.0), x, 1E-8);
+    EXPECT_NEAR(static_cast<double>(nfunctions[1].compute_value(x) * std::sqrt(2.0 / 3.0)), x, 1E-8);
 }
+
+
 
 TEST(computeTnl, NegativeFreq) {
     double Lambda = 10.0;
