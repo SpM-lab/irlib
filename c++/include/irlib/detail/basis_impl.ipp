@@ -222,6 +222,7 @@ namespace irlib {
         }
         Eigen::BDCSVD<matrix_t> svd_even(Kmat_even, Eigen::ComputeThinU | Eigen::ComputeThinV);
         if (verbose) {
+            std::cout << " done " << std::endl;
             std::cout << "  Constructing kernel matrix for odd sector ... " << std::flush;
         }
         auto kernel_odd = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) - kernel(x, -y); };
