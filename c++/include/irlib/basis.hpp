@@ -103,6 +103,7 @@ namespace irlib {
          * @param x  x on [-1,1]
          * @return   The value of u_l(x)
          */
+#ifndef SWIG //DO NOT EXPOSE TO PYTHON
         mpfr::mpreal ulx_mp(int l, const mpfr::mpreal &x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
@@ -132,6 +133,27 @@ namespace irlib {
             } else {
                 return v_basis_[l].compute_value(-y) * (l % 2 == 0 ? 1 : -1);
             }
+        }
+#endif
+
+        std::string ulx_str(int l, const std::string& str_x) const throw(std::runtime_error) {
+            auto prec = u_basis_[l].section_edge(0).get_prec();
+            mpfr::mpreal x(str_x, prec);
+            auto ulx = ulx_mp(l, x);
+
+            std::ostringstream out;
+            out << std::setprecision(mpfr::bits2digits(ulx.get_prec())) << ulx;
+            return out.str();
+        }
+
+        std::string vly_str(int l, const std::string& str_y) const throw(std::runtime_error) {
+            auto prec = v_basis_[l].section_edge(0).get_prec();
+            mpfr::mpreal y(str_y, prec);
+            auto vly = vly_mp(l, y);
+
+            std::ostringstream out;
+            out << std::setprecision(mpfr::bits2digits(vly.get_prec())) << vly;
+            return out.str();
         }
 
         /**

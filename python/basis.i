@@ -39,13 +39,22 @@ using namespace irlib;
 %multi_array_typemaps(Eigen::Tensor<std::complex<double>,7>);
 
 /* These ignore directives must come before including header files */
+%ignore irlib::basis::ulx_mp;
 
-/*
- * %feature("autodoc", "This is index_mesh .") alps::gf::index_mesh;
-%feature("autodoc", "Do not call") alps::gf::index_mesh::compute_points;
- */
-
+/* Include header files as part of interface file */
 %include <irlib/common.hpp>
 %include <irlib/basis.hpp>
 
-/* %template(real_piecewise_polynomial) alps::gf::piecewise_polynomial<double>; */
+%pythoncode {
+from mpmath import *
+}
+
+%extend irlib::basis {
+    %pythoncode %{
+        def ulx_mp(self, l, x):
+            return mpf(self.ulx_str(l, str(x)))
+
+        def vly_mp(self, l, y):
+            return mpf(self.vly_str(l, str(y)))
+    %}
+}
