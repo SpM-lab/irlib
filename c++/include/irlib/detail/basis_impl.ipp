@@ -125,7 +125,7 @@ namespace irlib {
 
     /**
      * Estimate absolute errors in ulx and vly by computing the residual of the integral equation
-     *   r(x) = u(x) - s^{-1} ¥int_0^1 K(x,y) v(y) dy
+     *   r(x) = u(x) - s^{-1} int_0^1 K(x,y) v(y) dy
      *   This returns an estimate of max_x |r(x)|
      * @tparam K
      * @param ux defined on [0, 1]
@@ -140,6 +140,14 @@ namespace irlib {
 
         auto local_nodes = detail::gauss_legendre_nodes<mpfr::mpreal>(num_local_nodes);
         auto nodes_y = composite_gauss_legendre_nodes(section_edges_y, local_nodes);
+
+        std::vector<T> sampling_points(section_edges_x);
+        for (int i=0; i < section_edges_x.size()-1; ++i) {
+            auto dx = section_edges_x[i+1]-section_edges_x[i];
+            sampling_points.push_back(0.25*dx + section_edges_x[i]);
+            sampling_points.push_back(0.50*dx + section_edges_x[i]);
+            sampling_points.push_back(0.75*dx + section_edges_x[i]);
+        }
 
         // Now we compute residual for u_l(x)
         double residual_x = 0.0;
@@ -181,6 +189,13 @@ namespace irlib {
     }
 
 
+    /**
+     *
+     * @tparam ScalarType
+     * @tparam KernelType
+     * @r_int_eq absolute errors in ulx and vly estimated by the residual of integral equations. This estimate may be too big
+     *    for very small singular values because the residual contains the inverse of singular values.
+     */
     template<typename ScalarType, typename KernelType>
     std::tuple<
             std::vector<mpreal>,
@@ -197,6 +212,7 @@ namespace irlib {
             const std::vector<mpreal> &section_edges_y,
             std::vector<double> &residual_x,
             std::vector<double> &residual_y,
+            std::pair<double,double>& r_int_eq,
             bool verbose
     ) throw(std::runtime_error) {
         using vector_t = Eigen::Matrix<ScalarType, Eigen::Dynamic, 1>;
@@ -311,20 +327,16 @@ namespace irlib {
             }
         }
 
-        if (verbose) {
-            std::pair<double,double> r;
-            if (u_basis_pp.size()%2 == 1) {
-                r.first = estimate_residual(u_basis_pp.back(), v_basis_pp.back(), sv.back(), kernel_even, num_nodes_gauss_legendre);
-                auto k_yx = [&](mpreal y, mpreal x) {return kernel_even(x,y);};
-                r.second = estimate_residual(v_basis_pp.back(), u_basis_pp.back(), sv.back(), k_yx, num_nodes_gauss_legendre);
-            } else {
-                r.first = estimate_residual(u_basis_pp.back(), v_basis_pp.back(), sv.back(), kernel_odd, num_nodes_gauss_legendre);
-                auto k_yx = [&](mpreal y, mpreal x) {return kernel_odd(x,y);};
-                r.second = estimate_residual(v_basis_pp.back(), u_basis_pp.back(), sv.back(), k_yx, num_nodes_gauss_legendre);
-            }
-            std::cout << "  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = " << r.first << " for largest l = " << u_basis_pp.size()-1 << std::endl;
-            std::cout << "  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = " << r.second << " for largest l = " << u_basis_pp.size()-1 << std::endl;
+        if (u_basis_pp.size()%2 == 1) {
+            r_int_eq.first = estimate_residual(u_basis_pp.back(), v_basis_pp.back(), sv.back(), kernel_even, num_nodes_gauss_legendre);
+            auto k_yx = [&](mpreal y, mpreal x) {return kernel_even(x,y);};
+            r_int_eq.second = estimate_residual(v_basis_pp.back(), u_basis_pp.back(), sv.back(), k_yx, num_nodes_gauss_legendre);
+        } else {
+            r_int_eq.first = estimate_residual(u_basis_pp.back(), v_basis_pp.back(), sv.back(), kernel_odd, num_nodes_gauss_legendre);
+            auto k_yx = [&](mpreal y, mpreal x) {return kernel_odd(x,y);};
+            r_int_eq.second = estimate_residual(v_basis_pp.back(), u_basis_pp.back(), sv.back(), k_yx, num_nodes_gauss_legendre);
         }
+
 
         residual_x.resize(section_edges_x.size() - 1);
         residual_y.resize(section_edges_y.size() - 1);
@@ -407,11 +419,13 @@ namespace irlib {
                 std::cout << "Iteration " << ite+1 << " : " << section_edges_x.size()-1 << " sections for x, " << section_edges_y.size()-1 << " sections for y." << std::endl;
             }
             std::vector<double> residual_x, residual_y;
+            std::pair<double,double> r_int_eq;
             auto r = generate_ir_basis_functions_impl<ScalarType>(kernel, max_dim, sv_cutoff, num_local_poly, num_nodes_gauss_legendre,
                     section_edges_x,
                     section_edges_y,
                     residual_x,
                     residual_y,
+                    r_int_eq,
                     verbose
             );
             int ns = section_edges_x.size() + section_edges_y.size();
@@ -420,8 +434,11 @@ namespace irlib {
             section_edges_y = u(section_edges_y, residual_y, a_tol);
 
             if (verbose) {
-                std::cout << "Iteration " << ite+1 << " : residual for x = " << *std::max_element(residual_x.begin(),residual_x.end()) << std::endl;
-                std::cout << "Iteration " << ite+1 << " : residual for y = " << *std::max_element(residual_y.begin(),residual_y.end()) << std::endl;
+                std::cout << "Iteration " << ite+1 << " : found " << std::get<1>(r).size() <<  " basis functions. " << std::endl;
+                std::cout << "Iteration " << ite+1 << " : max_x |u_l(x) - s_l^{-1} dy int_{-1}^1 K(x,y) v_l(y)| = " << r_int_eq.first << " for largest l." << std::endl;
+                std::cout << "Iteration " << ite+1 << " : max_y |v_l(y) - s_l^{-1} dx int_{-1}^1 K(x,y) u_l(x)| = " << r_int_eq.second << " for largest l." << std::endl;
+                std::cout << "Iteration " << ite+1 << " : residual estimated by expansion coefficients for x = " << *std::max_element(residual_x.begin(),residual_x.end()) << std::endl;
+                std::cout << "Iteration " << ite+1 << " : residual estimated by expansion coefficients for y = " << *std::max_element(residual_y.begin(),residual_y.end()) << std::endl;
             }
 
             if (section_edges_x.size() + section_edges_y.size() == ns) {
