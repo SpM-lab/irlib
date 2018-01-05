@@ -17,32 +17,22 @@ idx = 0
 markers = ['o', 's', 'x', '+', 'v']
 ls = ['-', '--', ':']
 colors = ['r', 'b', 'g', 'k']
-#for Lambda in [10.0, 100.0, 1000.0, 10000.0, 100000.0]:
-for Lambda in [10.0, 100.0]:
+for Lambda in [100.0]:
     print("Loading basis functions...")
     b = irlib.loadtxt("basis_f-mp-Lambda"+str(Lambda)+".txt")
+    print("Done!")
+    b_hacc = irlib.loadtxt("basis_f-mp-Lambda"+str(Lambda)+"-atol1e-12.txt")
     print("Done!")
 
     plt.figure(1)
     print("dim = ", b.dim())
 
-    x = 0.999
-    mp.dps = 50
-
-    tmp = b.ulx(b.dim()-1,x)
-    tmp2 = b.ulx_mp(b.dim()-1,mpf(x))
-    print(tmp, tmp2, tmp-tmp2)
-
-    tmp = b.vly(b.dim()-1,x)
-    tmp2 = b.vly_mp(b.dim()-1,mpf(x))
-    print(tmp, tmp2, tmp-tmp2)
-
     for l in [0, b.dim()-1]:
-        plt.plot(xvec, numpy.array([numpy.abs(b.ulx(l,x)) for x in xvec]), marker='', linestyle='-', color=colors[idx])
+        plt.plot(xvec, numpy.array([numpy.abs(b.ulx(l,x)-b_hacc.ulx(l,x)) for x in xvec]), marker='', linestyle='-', color=colors[idx])
 
     plt.figure(2)
     for l in [0, b.dim()-1]:
-        plt.plot(xvec, numpy.array([numpy.abs(b.vly(l,x)) for x in xvec]), marker='', linestyle='-', color=colors[idx])
+        plt.plot(xvec, numpy.array([numpy.abs(b.vly(l,x)-b_hacc.vly(l,x)) for x in xvec]), marker='', linestyle='-', color=colors[idx])
 
     idx += 1
 
