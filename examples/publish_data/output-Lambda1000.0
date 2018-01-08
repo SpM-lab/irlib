@@ -1,0 +1,72 @@
+Computing basis functions... It may take some time
+Using default precision = 100 bits.
+Computing approximate positions of zeros... Done
+Iteration 1 : 26 sections for x, 26 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 2.67322e-07 for largest l = 51
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 5.26163e-07 for largest l = 51
+Iteration 1 : residual for x = 2.26832e-05
+Iteration 1 : residual for y = 7.36491e-05
+Iteration 2 : 51 sections for x, 51 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 5.49304e-10 for largest l = 51
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 1.89068e-09 for largest l = 51
+Iteration 2 : residual for x = 1.12494e-07
+Iteration 2 : residual for y = 3.55906e-07
+Iteration 3 : 99 sections for x, 97 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 7.07128e-13 for largest l = 51
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 4.22279e-12 for largest l = 51
+Iteration 3 : residual for x = 3.42069e-10
+Iteration 3 : residual for y = 9.93139e-10
+Iteration 4 : 112 sections for x, 108 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 1.8745e-13 for largest l = 51
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 2.05604e-13 for largest l = 51
+Iteration 4 : residual for x = 9.80635e-11
+Iteration 4 : residual for y = 9.18482e-11
+Done!
+Computing basis functions... It may take some time
+Using default precision = 100 bits.
+Computing approximate positions of zeros... Done
+Iteration 1 : 37 sections for x, 37 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 7.33752e-07 for largest l = 73
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 7.1371e-07 for largest l = 73
+Iteration 1 : residual for x = 0.000104194
+Iteration 1 : residual for y = 0.000149951
+Iteration 2 : 73 sections for x, 73 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 1.15868e-09 for largest l = 73
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 3.12048e-09 for largest l = 73
+Iteration 2 : residual for x = 3.93877e-07
+Iteration 2 : residual for y = 7.09993e-07
+Iteration 3 : 143 sections for x, 141 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 1.10573e-12 for largest l = 73
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 6.33137e-12 for largest l = 73
+Iteration 3 : residual for x = 1.05658e-09
+Iteration 3 : residual for y = 1.8706e-09
+Iteration 4 : 188 sections for x, 193 sections for y.
+  Constructing kernel matrix for even sector ...  done 
+  SVD kernel matrix for even sector ...   Constructing kernel matrix for odd sector ...  done 
+  SVD kernel matrix for odd sector ...  done 
+  Residual of integral equation: max_x |u_l(x) - s_l^{-1}^1 dy int_{-1}^1 K(x,y) v_l(y)| = 2.71796e-13 for largest l = 73
+  Residual of integral equation: max_y |v_l(y) - s_l^{-1}^1 dx int_{-1}^1 K(x,y) u_l(x)| = 1.42597e-13 for largest l = 73
+Iteration 4 : residual for x = 9.97456e-11
+Iteration 4 : residual for y = 9.92e-11
+Done!

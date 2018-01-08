@@ -22,7 +22,6 @@ for Lambda in [100.0]:
     b = irlib.loadtxt("basis_f-mp-Lambda"+str(Lambda)+".txt")
     print("Done!")
     b_hacc = irlib.loadtxt("basis_f-mp-Lambda"+str(Lambda)+"-atol1e-12.txt")
-    print("Done!")
 
     plt.figure(1)
     print("dim = ", b.dim())
