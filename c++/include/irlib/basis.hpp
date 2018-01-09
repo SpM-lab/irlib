@@ -312,7 +312,7 @@ namespace irlib {
         return basis(s, Lambda, sv, u_basis, v_basis);
     }
 
-    inline void savetxt(const std::string& fname, const basis& b) throw std::runtime_error {
+    inline void savetxt(const std::string& fname, const basis& b) throw(std::runtime_error) {
         std::ofstream ofs(fname);
 
         int version = 1;
@@ -334,7 +334,7 @@ namespace irlib {
         }
     }
 
-    inline basis loadtxt(const std::string& fname) throw std::runtime_error {
+    inline basis loadtxt(const std::string& fname) throw(std::runtime_error) {
         std::ifstream ifs(fname);
 
         statistics::statistics_type s;
