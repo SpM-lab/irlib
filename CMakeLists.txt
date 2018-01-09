@@ -25,12 +25,14 @@ message(STATUS "BUILDDOC" ${BUILD_DOCUMENTATION})
 
 ### Dependencies
 #find_package(Eigen3 REQUIRED)
-find_package(MPFR 2.3.1 REQUIRED)
+find_package(MPFR 3.0.0 REQUIRED)
 find_package(GMP REQUIRED) #TO DO: version check (>=4.2.1) & MPIR support
 if (BUILD_DOCUMENTATION)
   find_package(Doxygen REQUIRED)
 endif()
 # find_package(BOOST)
+
+find_package(Threads)
 
 #include directories
 set(EIGEN3_INCLUDE_DIR "thirdparty/eigen3")

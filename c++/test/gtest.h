@@ -54,6 +54,9 @@
 #include <limits>
 #include <ostream>
 #include <vector>
+#include <algorithm>
+#include <cerrno>
+#include <stdarg.h>
 
 // Copyright 2005, Google Inc.
 // All rights reserved.

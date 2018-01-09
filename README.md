@@ -88,3 +88,11 @@ $ cmake \
      -DPYTHON_LIBRARY=/usr/local/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6m.dylib \
      ... (other options) ...
 ```
+
+If you want to force CMake not to find MPFR in the system directory,
+please set the following two environment variables.
+
+```
+export MPFR_INCLUDE_DIR=$HOME/opt/mpfr/include
+export MPFR_LIB_DIR=$HOME/opt/mpfr/lib
+```

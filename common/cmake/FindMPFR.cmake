@@ -19,13 +19,11 @@
 
 # Set MPFR_INCLUDES
 
-find_path(MPFR_INCLUDES
-    NAMES
-    mpfr.h
-    PATHS
-    $ENV{GMPDIR}
-    ${INCLUDE_INSTALL_DIR}
-    )
+IF(DEFINED ENV{MPFR_INCLUDE_DIR})
+    find_path(MPFR_INCLUDES NAMES mpfr.h PATHS $ENV{GMPDIR} $ENV{MPFR_INCLUDE_DIR} ${INCLUDE_INSTALL_DIR} NO_DEFAULT_PATH)
+else()
+    find_path(MPFR_INCLUDES NAMES mpfr.h PATHS $ENV{GMPDIR} ${INCLUDE_INSTALL_DIR})
+endif()
 
 # Set MPFR_FIND_VERSION to 1.0.0 if no minimum version is specified
 
@@ -73,7 +71,11 @@ endif(MPFR_INCLUDES)
 
 # Set MPFR_LIBRARIES
 
-find_library(MPFR_LIBRARIES mpfr PATHS $ENV{GMPDIR} ${LIB_INSTALL_DIR})
+IF(DEFINED ENV{MPFR_LIB_DIR})
+    find_library(MPFR_LIBRARIES mpfr PATHS $ENV{MPFR_LIB_DIR} NO_DEFAULT_PATH)
+else()
+    find_library(MPFR_LIBRARIES mpfr PATHS $ENV{GMPDIR} ${LIB_INSTALL_DIR})
+endif()
 
 # Epilogue
 
