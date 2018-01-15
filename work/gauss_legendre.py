@@ -2,7 +2,7 @@ import sys
 from mpmath import *
 from mpmath.calculus.quadrature import GaussLegendre
 
-dps = 200
+dps = 300
 
 mp.dps = dps
 prec = int(dps * 3.33333)
