@@ -2,7 +2,7 @@ import sys
 from mpmath import *
 from mpmath.calculus.quadrature import GaussLegendre
 
-dps = 50
+dps = 200
 
 mp.dps = dps
 prec = int(dps * 3.33333)
@@ -42,7 +42,7 @@ gauss_legendre_nodes(int num_nodes) {
 """)
 
 #Note: mpmath gives wrong results for degree==1! 
-for degree in range(2,7):
+for degree in range(2,8):
     g = GaussLegendre(mp)
     gl = g.get_nodes(-1, 1, degree=degree, prec=prec)
 
