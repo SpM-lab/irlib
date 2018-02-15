@@ -263,6 +263,8 @@ namespace irlib {
                         const std::string& fp_mode="mp",
                         double a_tol = 1e-6,
                         long prec = 64,
+                        int n_local_poly = 10,
+                        int num_nodes_gauss_legendre = 24,
                         bool verbose = true
         ) throw(std::runtime_error) {
         std::vector<mpfr::mpreal> sv;
@@ -286,25 +288,22 @@ namespace irlib {
         if (fp_mode == "mp") {
             if (s == statistics::FERMIONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpfr::mpreal>(
-                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol);
+                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
             } else if (s == statistics::BOSONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpfr::mpreal>(
-                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol);
+                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
             }
-        /*
         } else if (fp_mode == "long double") {
-
             if (cutoff < 1e-8) {
                 std::cout << "Warning : cutoff cannot be smaller than 1e-8 for long-double precision version. Please use fp_mode='mp'!" << std::endl;
             }
             if (s == statistics::FERMIONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<long double>(
-                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol);
+                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
             } else if (s == statistics::BOSONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<long double>(
-                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol);
+                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
             }
-            */
         } else {
             throw std::runtime_error("Unknown fp_mode " + fp_mode + ". Only 'mp' is supported.");
         }

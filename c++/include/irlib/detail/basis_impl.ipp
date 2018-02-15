@@ -228,7 +228,7 @@ namespace irlib {
         if (verbose) {
             std::cout << "  Constructing kernel matrix for even sector ... "  << std::flush;
         }
-        auto kernel_even = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) + kernel(x, -y); };
+        auto kernel_even = [&](const mpreal &x, const mpreal &y) { return kernel(x, y) + kernel(x, -y); };
         auto Kmat_even = irlib::matrix_rep<ScalarType>(
                 kernel_even, section_edges_x, section_edges_y, num_nodes_gauss_legendre, num_local_poly
         );
@@ -241,7 +241,7 @@ namespace irlib {
             std::cout << " done " << std::endl;
             std::cout << "  Constructing kernel matrix for odd sector ... " << std::flush;
         }
-        auto kernel_odd = [&](const ScalarType &x, const ScalarType &y) { return kernel(x, y) - kernel(x, -y); };
+        auto kernel_odd = [&](const mpreal &x, const mpreal &y) { return kernel(x, y) - kernel(x, -y); };
         auto Kmat_odd = irlib::matrix_rep<ScalarType>(
                 kernel_odd, section_edges_x, section_edges_y, num_nodes_gauss_legendre, num_local_poly
         );
