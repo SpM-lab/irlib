@@ -43,8 +43,8 @@ $ make install
 ## Contributors
 Hiroshi Shinaoka, Naoya Chikano, Junya Otsuki
 
-## Examples
-You can find examples below the directory "examples" in the source directory.
+## Samples
+You can find samples below the directory "samples" in the source directory.
 
 ## License
 All files except for those in the directory "thirdparty" are licensed under MIT license. See LICENSE for more details.
