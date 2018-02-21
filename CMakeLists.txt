@@ -19,7 +19,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 option(BUILD_DOCUMENTATION "Build documentations" OFF)
 
 # Where to install?
-message(STATUS "C++ libraries Will be installed in ${CMAKE_INSTALL_PREFIX}")
+#message(STATUS "C++ libraries Will be installed in ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Redifine CMAKE_INSTALL_PREFIX if you wish to change install location")
 message(STATUS "BUILDDOC" ${BUILD_DOCUMENTATION})
 
@@ -38,7 +38,7 @@ set(IRLIB_LIBRARY_INCLUDE_DIRS "c++/include" "thirdparty/mpfr_cxx" "test" ${EIGE
 include_directories(${IRLIB_LIBRARY_INCLUDE_DIRS})
 
 #Python bindings
-option(PYTHON "Build Python bindings" ON)
+#option(PYTHON "Build Python bindings" ON)
 
 # Build and enable tests
 # testing setup
@@ -52,6 +52,6 @@ endif()
 
 add_subdirectory(c++)
 
-if (PYTHON)
-  add_subdirectory(python)
-endif()
+#if (PYTHON)
+add_subdirectory(python)
+#endif()
