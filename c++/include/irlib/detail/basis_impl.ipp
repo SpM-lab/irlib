@@ -719,6 +719,7 @@ namespace irlib {
     /**
     * Compute a transformation matrix from a give orthogonal basis set to Matsubara freq.
     * @tparam T  scalar type
+    * @tparam Tx  scalar type for x in [-1,1]
     * @param n_vec indices of Matsubara frequqneices for which matrix elements will be computed (in strictly ascending order).
     *          The Matsubara basis functions look like exp(i PI * (n[i]+1/2)) for fermions, exp(i PI * n[i]) for bosons.
     * @param bf_src orthogonal basis functions on [-1,1]. They must be piecewise polynomials of the same order. Piecewise polynomial representations on [0,1] must be provided.
@@ -756,7 +757,8 @@ namespace irlib {
 
         // compute tails
         int sign_s = (statis == statistics::FERMIONIC ? -1 : 1);
-        int num_tail = 2*(bf_src[0].order()/2) ;//this is an even number
+        // even number close to (bf_src[0].order()/2
+        int num_tail = std::min(2*((bf_src[0].order()/2)/2), 4);
         if (num_tail < 4) {
             throw std::runtime_error("num_tail < 4.");
         }
@@ -814,6 +816,7 @@ namespace irlib {
     /**
     * Compute a transformation matrix (\bar{T}_{nl}) from a give orthogonal basis set to Matsubara freq.
     * @tparam T  scalar type
+    * @tparam Tx  scalar type for x \in [-1, 1]
     * @param n indices of Matsubara frequqneices for which matrix elements will be computed (in strictly ascending order).
     *          The Matsubara basis functions look like exp(i PI * (n[i]/2) * (x+1)).
     * @param bf_src orthogonal basis functions on [-1,1]. They must be piecewise polynomials of the same order. Piecewise polynomial representations on [0,1] must be provided.

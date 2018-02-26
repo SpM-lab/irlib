@@ -249,6 +249,7 @@ namespace irlib {
          */
         Eigen::Tensor<std::complex<double>, 2>
         compute_Tnl(const std::vector<long> &n_vec) const {
+            std::cout << "Warning: compute_Tnl() is not well tested!" << std::endl;
             Eigen::Tensor<std::complex<double>, 2> Tnl;
             compute_Tnl(n_vec, Tnl);
             return Tnl;

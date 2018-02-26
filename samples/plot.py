@@ -19,17 +19,17 @@ ls = ['-', '--', ':']
 colors = ['r', 'b', 'g', 'k']
 for Lambda in [10000.0]:
     #print("Loading basis functions...")
-    b = irlib.loadtxt("basis_f-mp-Lambda"+str(Lambda)+".txt")
+    b = irlib.loadtxt("basis_b-mp-Lambda"+str(Lambda)+".txt")
 
     print("dim = ", b.dim())
 
     plt.figure(1)
-    for l in [0, 2, 4]:
+    for l in [0, 4, 6]:
         plt.plot(xvec, numpy.array([b.ulx(l,x) for x in xvec]), marker='', linestyle='-', color=colors[idx])
 
     plt.figure(2)
-    for l in [0, 2, 4]:
-        plt.plot(xvec, numpy.array([b.vly(l,x) for x in xvec]), marker='', linestyle='-', color=colors[idx], label='l='+str(l))
+    for l in [0, 4, 6]:
+        plt.plot(xvec, numpy.array([b.vly(l,x) for x in xvec])/b.vly(l,1), marker='', linestyle='-', color=colors[idx], label='l='+str(l))
 
     plt.figure(3)
     plt.plot([b.sl(l)/b.sl(0) for l in range(b.dim())], marker='+', linestyle='-', color=colors[idx])
