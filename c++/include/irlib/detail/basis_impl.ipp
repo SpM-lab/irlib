@@ -543,27 +543,27 @@ namespace irlib {
     /// Construct piecewise polynomials representing exponential functions: exp(i w_i x)
     template<class T, typename Tx>
     void construct_exp_functions_coeff(
-            const std::vector<double> &w,
+            const std::vector<T> &w,
             const std::vector<Tx> &section_edges,
             int k,
             Eigen::Tensor<std::complex<T>, 3> &coeffs) {
         const int N = section_edges.size() - 1;
 
-        std::complex<double> z;
+        std::complex<T> z;
         coeffs = Eigen::Tensor<std::complex<T>,3>(w.size(), N, k + 1);
 
-        std::vector<double> pre_factor(k + 1);
+        std::vector<T> pre_factor(k + 1);
         pre_factor[0] = 1.0;
         for (int j = 1; j < k + 1; ++j) {
             pre_factor[j] = pre_factor[j - 1] / j;
         }
 
         for (int n = 0; n < w.size(); ++n) {
-            auto z = std::complex<double>(0.0, w[n]);
+            auto z = std::complex<T>(0.0, w[n]);
             for (int section = 0; section < N; ++section) {
-                const double x = static_cast<double>(section_edges[section]);
+                auto x = section_edges[section];
                 std::complex<T> exp0 = std::exp(z * (x + 1));
-                std::complex<T> z_power = 1.0;
+                std::complex<T> z_power = T(1);
                 for (int j = 0; j < k + 1; ++j) {
                     coeffs(n, section, j) = exp0 * z_power * pre_factor[j];
                     z_power *= z;
@@ -576,18 +576,33 @@ namespace irlib {
  *  Compute \int_x0^x1 dx exp(i w (x+1)) (x-x0)^k
  *      for k=0, 1, ..., K+1. x1 = x0+dx.
 **/
-    inline void compute_Ik(double x0, double dx, double w, int K, std::vector<std::complex<double> >& Ik) {
+    template<typename T>
+    void compute_Ik(T x0, T dx, T w, int K, std::vector<std::complex<T> >& Ik) {
         auto x1 = x0 + dx;
-        auto iw = std::complex<double>(0.0, w);
-        auto exp0 = std::exp(iw*(x0+1));
-        auto exp1 = std::exp(iw*(x1+1));
+        auto iw = std::complex<T>(0.0, w);
+        auto exp0 = exp(iw*(x0+1));
+        auto exp1 = exp(iw*(x1+1));
         Ik[0] = (exp1 - exp0)/iw;
 
         auto dx_k = dx;
         for (int k=1; k<K+1; ++k) {
-            Ik[k] = (dx_k * exp1 - (k * 1.0) * Ik[k-1])/iw;
+            Ik[k] = (dx_k * exp1 - static_cast<T>(k) * Ik[k-1])/iw;
             dx_k *= dx;
         }
+    }
+
+    //template<typename T>
+    //reutrn
+    template<typename T> T const_pi();
+
+    template<>
+    inline mpfr::mpreal const_pi<mpfr::mpreal>() {
+        return mpfr::const_pi();
+    }
+
+    template<>
+    inline double const_pi<double>() {
+        return M_PI;
     }
 
 /**
@@ -602,22 +617,23 @@ namespace irlib {
  */
     template<typename T, typename Tx>
     void compute_integral_with_exp(
-            const std::vector<double> &w,
+            const std::vector<T> &w,
             const std::vector<piecewise_polynomial<T,Tx> > &pp_func,
-            Eigen::Tensor<std::complex<double>, 2> &Tnl
+            Eigen::Tensor<std::complex<T>, 2> &Tnl
     ) {
-        typedef std::complex<double> dcomplex;
-        typedef piecewise_polynomial<std::complex<double>,Tx> pp_type;
-        typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
-        typedef Eigen::Matrix<std::complex<long double>, Eigen::Dynamic, Eigen::Dynamic> ex_matrix_t;
-        typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
+        typedef std::complex<T> dcomplex;
+        typedef piecewise_polynomial<std::complex<T>,Tx> pp_type;
+        typedef Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> ex_matrix_t;
+        typedef Eigen::Tensor<std::complex<T>, 2> tensor_t;
+
+        T pi = const_pi<T>();
 
         //order of polynomials used for representing exponential functions internally.
         const int k_iw = 16;//for debug
         const int k = pp_func[0].order();
         const int n_section = pp_func[0].num_sections();
 
-        std::vector<std::complex<double> > Ik(k+1);
+        std::vector<std::complex<T> > Ik(k+1);
 
         for (int l = 0; l < pp_func.size(); ++l) {
             if (k != pp_func[l].order()) {
@@ -641,7 +657,7 @@ namespace irlib {
         //Use Taylor expansion for exp(i w_n tau) for w_n*dx < cutoff*M_PI
         const double cutoff = 0.1;
 
-        Eigen::Tensor<std::complex<double>,3> exp_coeffs(w.size(), n_section, k_iw + 1);
+        Eigen::Tensor<std::complex<T>,3> exp_coeffs(w.size(), n_section, k_iw + 1);
         construct_exp_functions_coeff(w, pp_func[0].section_edges(), k_iw, exp_coeffs);
 
         ex_matrix_t left_mid_matrix(n_iw, k + 1);
@@ -651,11 +667,11 @@ namespace irlib {
         ex_matrix_t r(n_iw, pp_func.size());
         r.setZero();
 
-        std::vector<double> dx_power(k + k_iw + 2);
+        std::vector<T> dx_power(k + k_iw + 2);
 
         for (int s = 0; s < n_section; ++s) {
             auto x0 = pp_func[0].section_edge(s);
-            double dx = static_cast<double>(pp_func[0].section_edge(s + 1) - pp_func[0].section_edge(s));
+            T dx = static_cast<T>(pp_func[0].section_edge(s + 1) - pp_func[0].section_edge(s));
             left_mid_matrix.setZero();
 
             dx_power[0] = 1.0;
@@ -664,7 +680,7 @@ namespace irlib {
             }
 
             //Use Taylor expansion for exp(i w_n tau) for w_n*dx < cutoff*M_PI
-            const double w_max_cs = cutoff * M_PI / dx;
+            auto w_max_cs = cutoff * pi / dx;
             int n_max_cs = -1;
             for (int i = 0; i < w.size(); ++i) {
                 if (w[i] <= w_max_cs) {
@@ -692,7 +708,7 @@ namespace irlib {
 
             //Otherwise, compute the overlap exactly
             for (int n = std::max(n_max_cs + 1, 0); n <= n_max; ++n) {
-                compute_Ik(static_cast<double>(x0), dx, w[n], k, Ik);
+                compute_Ik(x0, dx, w[n], k, Ik);
                 for (int i=0; i<k+1; ++i) {
                     left_mid_matrix(n, i) = Ik[i];
                 }
@@ -700,7 +716,7 @@ namespace irlib {
 
             for (int l = 0; l < pp_func.size(); ++l) {
                 for (int p2 = 0; p2 < k + 1; ++p2) {
-                    right_matrix(p2, l) = static_cast<double>(pp_func[l].coefficient(s, p2));
+                    right_matrix(p2, l) = static_cast<T>(pp_func[l].coefficient(s, p2));
                 }
             }
 
@@ -724,7 +740,7 @@ namespace irlib {
     *          The Matsubara basis functions look like exp(i PI * (n[i]+1/2)) for fermions, exp(i PI * n[i]) for bosons.
     * @param bf_src orthogonal basis functions on [-1,1]. They must be piecewise polynomials of the same order. Piecewise polynomial representations on [0,1] must be provided.
     *               Basis functions u_l(x) are assumed to be even or odd for even l and odd l, respectively.
-    * @param Tnl  computed transformation matrix
+    * @param Tnl  computed transformation matrix, results are cast into double
     */
     template<typename T, typename Tx>
     void compute_transformation_matrix_to_matsubara(
@@ -734,10 +750,11 @@ namespace irlib {
             Eigen::Tensor<std::complex<double>, 2> &Tnl
     ) {
         typedef std::complex<double> dcomplex;
-        typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
-        typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
+        typedef Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
+        typedef Eigen::Tensor<std::complex<T>, 2> tensor_t;
 
         int Nl = bf_src.size();
+        auto pi = const_pi<T>();
 
         if (n_vec.size() == 0) {
             return;
@@ -758,16 +775,18 @@ namespace irlib {
         // compute tails
         int sign_s = (statis == statistics::FERMIONIC ? -1 : 1);
         // even number close to (bf_src[0].order()/2
-        int num_tail = std::min(2*((bf_src[0].order()/2)/2), 4);
+        int num_tail = std::min(2*(bf_src[0].order()/2), 4);
         if (num_tail < 4) {
             throw std::runtime_error("num_tail < 4.");
         }
-        MatrixXc tails(bf_src.size(), num_tail);
-        const std::complex<double> zi(0.0, 1.0);
+        Eigen::Matrix<std::complex<T>,Eigen::Dynamic,Eigen::Dynamic> tails(bf_src.size(), num_tail);
+        const std::complex<T> zi(0.0, 1.0);
         for (int l=0; l<bf_src.size(); ++l) {
+            auto ztmp = zi;
             for (int m=0; m<num_tail; ++m) {
                 int sign_lm = (l+m)%2==0 ? 1 : -1;
-                tails(l,m) = - std::sqrt(2.0) * std::pow(2, m) * std::pow(zi, m+1) * static_cast<double>((sign_s - sign_lm) * bf_src[l].derivative(1, m));
+                tails(l,m) = - sqrt(T(2.0)) * pow(T(2), m) * ztmp * static_cast<T>((sign_s - sign_lm) * bf_src[l].derivative(1, m));
+                ztmp *= zi;
             }
         }
 
@@ -778,8 +797,8 @@ namespace irlib {
         for (int l=0; l<Nl; ++l) {
             int m_low = (l+offset-1)%2==0 ?  0 : 1;
             int m_high = (l+offset-1)%2==0 ?  num_tail-2 : num_tail-1;
-            double wn_limit = std::pow(eps * std::abs(tails(l,m_low)/tails(l,m_high)), 1.0/(m_low-m_high) );
-            double n_limit = 0.5*(wn_limit/M_PI-offset);
+            auto wn_limit = pow(eps * abs(tails(l,m_low)/tails(l,m_high)), 1.0/(m_low-m_high) );
+            auto n_limit = 0.5*(wn_limit/pi-offset);
 
             num_low_freq[l] = std::count_if(n_vec.begin(), n_vec.end(), [&](long n){return n < n_limit;});
         }
@@ -790,13 +809,13 @@ namespace irlib {
         std::transform(n_vec.begin(), last, std::back_inserter(ovec), [&](long n){return 2*n+offset;});
 
         // Compute Tnl
-        Eigen::Tensor<std::complex<double>, 2> Tnl_low_freq;
+        Eigen::Tensor<std::complex<T>, 2> Tnl_low_freq;
         compute_Tbar_ol(ovec, bf_src, Tnl_low_freq);
         Tnl = Eigen::Tensor<std::complex<double>,2>(n_vec.size(), bf_src.size());
         Tnl.setZero();
         for(int l=0; l<Nl; ++l) {
             for(int i=0; i<max_num_low_freq; ++i) {
-                Tnl(i,l) = Tnl_low_freq(i,l);
+                Tnl(i,l) = to_dcomplex(Tnl_low_freq(i,l));
             }
         }
 
@@ -806,12 +825,13 @@ namespace irlib {
                 double wn = (2*n_vec[i]+offset) * M_PI;
                 Tnl(i, l) = 0.0;
                 for (int m=0; m<num_tail; ++m) {
-                    Tnl(i, l) += tails(l,m)/std::pow(wn, m+1);
+                    Tnl(i, l) += to_dcomplex(tails(l,m)/pow(wn, m+1));
                 }
             }
         }
 
     }
+
 
     /**
     * Compute a transformation matrix (\bar{T}_{nl}) from a give orthogonal basis set to Matsubara freq.
@@ -827,11 +847,11 @@ namespace irlib {
     void compute_Tbar_ol(
             const std::vector<long> &o_vec,
             const std::vector<irlib::piecewise_polynomial<T,Tx>> &bf_src,
-            Eigen::Tensor<std::complex<double>, 2> &Tbar_ol
+            Eigen::Tensor<std::complex<T>, 2> &Tbar_ol
     ) {
-        typedef std::complex<double> dcomplex;
-        typedef Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
-        typedef Eigen::Tensor<std::complex<double>, 2> tensor_t;
+        typedef std::complex<T> dcomplex;
+        typedef Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
+        typedef Eigen::Tensor<std::complex<T>, 2> tensor_t;
 
         if (o_vec.size() == 0) {
             return;
@@ -843,7 +863,7 @@ namespace irlib {
             }
         }
 
-        std::vector<double> w;
+        std::vector<T> w;
         std::transform(o_vec.begin(), o_vec.end(), std::back_inserter(w), [](long o) { return 0.5 * M_PI * o; });
 
         compute_integral_with_exp(w, bf_src, Tbar_ol);
@@ -853,102 +873,20 @@ namespace irlib {
                 if ( (l+o_vec[i])%2 == 0) {
                     Tbar_ol(i,l) = 2 * Tbar_ol(i,l).real();
                 } else {
-                    Tbar_ol(i,l) = std::complex<double>(0.0, 2 * Tbar_ol(i,l).imag());
+                    Tbar_ol(i,l) = std::complex<T>(0.0, 2 * Tbar_ol(i,l).imag());
                 }
             }
         }
 
-        std::vector<double> inv_norm(bf_src.size());
+        std::vector<T> inv_norm(bf_src.size());
         for (int l = 0; l < bf_src.size(); ++l) {
-            inv_norm[l] = 1. / std::sqrt(2*static_cast<double>(bf_src[l].overlap(bf_src[l])));
+            inv_norm[l] = 1. / sqrt(2*bf_src[l].overlap(bf_src[l]));
         }
         for (int n = 0; n < w.size(); ++n) {
             for (int l = 0; l < bf_src.size(); ++l) {
-                Tbar_ol(n, l) *= inv_norm[l] * std::sqrt(0.5);
+                Tbar_ol(n, l) *= inv_norm[l] * sqrt(static_cast<T>(0.5));
             }
         }
-    }
-
-
-    /// Compute overlap <left | right> with complex conjugate
-    template<typename T1, typename T2, typename Tx>
-    void compute_overlap(
-            const std::vector<piecewise_polynomial<T1,Tx> > &left_vectors,
-            const std::vector<piecewise_polynomial<T2,Tx> > &right_vectors,
-            Eigen::Matrix<typename result_of_overlap<T1, T2>::value, Eigen::Dynamic, Eigen::Dynamic> &results) {
-        typedef typename result_of_overlap<T1, T2>::value Tr;
-
-        const int NL = left_vectors.size();
-        const int NR = right_vectors.size();
-        const int n_sections = left_vectors[0].num_sections();
-
-        const int k1 = left_vectors[0].order();
-        const int k2 = right_vectors[0].order();
-
-        if (left_vectors[0].section_edges() != right_vectors[0].section_edges()) {
-            throw std::runtime_error("Not supported");
-        }
-
-        for (int n = 0; n < NL - 1; ++n) {
-            if (left_vectors[n].section_edges() != left_vectors[n + 1].section_edges()) {
-                throw std::runtime_error("Not supported");
-            }
-        }
-
-        for (int n = 0; n < NL; ++n) {
-            if (k1 != left_vectors[n].order()) {
-                throw std::runtime_error("Left vectors must be piecewise polynomials of the same order.");
-            }
-        }
-
-        for (int n = 0; n < NR; ++n) {
-            if (k2 != right_vectors[n].order()) {
-                throw std::runtime_error("Right vectors must be piecewise polynomials of the same order.");
-            }
-        }
-
-        for (int l = 0; l < NR - 1; ++l) {
-            if (right_vectors[l].section_edges() != right_vectors[l + 1].section_edges()) {
-                throw std::runtime_error("Not supported");
-            }
-        }
-
-        std::vector<double> x_min_power(k1 + k2 + 2), dx_power(k1 + k2 + 2);
-
-        Eigen::Matrix<Tr, Eigen::Dynamic, Eigen::Dynamic> mid_matrix(k1 + 1, k2 + 1);
-        Eigen::Matrix<T1, Eigen::Dynamic, Eigen::Dynamic> left_matrix(NL, k1 + 1);
-        Eigen::Matrix<T2, Eigen::Dynamic, Eigen::Dynamic> right_matrix(k2 + 1, NR);
-        results.resize(NL, NR);
-
-        results.setZero();
-        for (int s = 0; s < n_sections; ++s) {
-            dx_power[0] = 1.0;
-            const double dx = left_vectors[0].section_edge(s + 1) - left_vectors[0].section_edge(s);
-            for (int p = 1; p < dx_power.size(); ++p) {
-                dx_power[p] = dx * dx_power[p - 1];
-            }
-
-            for (int p = 0; p < k1 + 1; ++p) {
-                for (int p2 = 0; p2 < k2 + 1; ++p2) {
-                    mid_matrix(p, p2) = dx_power[p + p2 + 1] / (p + p2 + 1.0);
-                }
-            }
-
-            for (int n = 0; n < NL; ++n) {
-                for (int p = 0; p < k1 + 1; ++p) {
-                    left_matrix(n, p) = std::conj(left_vectors[n].coefficient(s, p));
-                }
-            }
-
-            for (int l = 0; l < NR; ++l) {
-                for (int p2 = 0; p2 < k2 + 1; ++p2) {
-                    right_matrix(p2, l) = right_vectors[l].coefficient(s, p2);
-                }
-            }
-
-            results += left_matrix * (mid_matrix * right_matrix);
-        }
-
     }
 
 

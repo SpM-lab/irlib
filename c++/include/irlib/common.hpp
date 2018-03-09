@@ -102,5 +102,12 @@ namespace irlib {
         return mpfr::digits2bits(prec);
     }
 
+    inline std::complex<double>
+    to_dcomplex(const std::complex<mpreal>& mp) {
+        return std::complex<double>(
+                static_cast<double>(mp.real()), static_cast<double>(mp.imag())
+        );
+    }
+
 }
 

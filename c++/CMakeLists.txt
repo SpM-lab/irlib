@@ -20,10 +20,14 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${BLAS_LINKER_FLAGS} ${LAP
 
 file(GLOB_RECURSE header_files *.hpp)
 
+
 if (Testing)
   #testing source files
-  set(unittest_src mpmath expensive_tests)
+  # Copy precomputed basis files to build directory for testing
+  file(COPY ${CMAKE_SOURCE_DIR}/samples/ DESTINATION ${CMAKE_BINARY_DIR}/c++ FILES_MATCHING     PATTERN "*.txt")
+  set(unittest_src mpmath precomputed_basis expensive_tests)
   foreach(test ${unittest_src})
       add_gtest(${test} test)
   endforeach(test)
+
 endif()
