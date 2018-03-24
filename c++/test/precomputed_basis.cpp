@@ -18,6 +18,18 @@ to_dcomplex(std::complex<mpreal>& z) {
     return std::complex<double>(static_cast<double>(z.real()), static_cast<double>(z.imag()));
 }
 
+TEST(precomputed_basis, cubic_spline) {
+    auto b = loadtxt("basis_f-mp-Lambda10000.0.txt");
+    auto dim = b.dim();
+
+    std::vector<piecewise_polynomial<mpreal,mpreal> > basis_vectors_org;
+    for (int l=0; l<dim; ++l) {
+        basis_vectors_org.push_back(b.ulx(l));
+    }
+
+    auto basis_vectors_cs =  cspline_approximation(basis_vectors, 5);
+}
+
 TEST(precomputed_basis, Tnl) {
     int num_local_nodes = 4*48;
 

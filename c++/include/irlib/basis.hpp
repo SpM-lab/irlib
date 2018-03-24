@@ -86,6 +86,12 @@ namespace irlib {
             return static_cast<double>(ulx_mp(l, mpfr::mpreal(x)));
         }
 
+        double ulx_derivative(int l, double x, int order) const throw(std::runtime_error) {
+            assert(x >= -1 && x <= 1);
+            assert(l >= 0 && l < dim());
+            return static_cast<double>(ulx_derivative_mp(l, mpfr::mpreal(x), order));
+        }
+
         /**
          * @param l  order of basis function
          * @param y  y on [-1,1]
@@ -96,6 +102,13 @@ namespace irlib {
             assert(l >= 0 && l < dim());
             return static_cast<double>(vly_mp(l, mpfr::mpreal(y)));
         }
+
+        double vly_derivative(int l, double y, int order) const throw(std::runtime_error) {
+            assert(y >= -1 && y <= 1);
+            assert(l >= 0 && l < dim());
+            return static_cast<double>(vly_derivative_mp(l, mpfr::mpreal(y), order));
+        }
+
 
         /**
          * This function should not be called outside this library
@@ -117,6 +130,19 @@ namespace irlib {
             }
         }
 
+        mpfr::mpreal ulx_derivative_mp(int l, const mpfr::mpreal &x, int order) const throw(std::runtime_error) {
+            assert(x >= -1 && x <= 1);
+            assert(l >= 0 && l < dim());
+            python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
+            python_runtime_check(x >= -1 && x <= 1, "x must be in [-1,1].");
+
+            if (x >= 0) {
+                return u_basis_[l].derivative(x, order);
+            } else {
+                return u_basis_[l].derivative(-x, order) * ((l+order) % 2 == 0 ? 1 : -1);
+            }
+        }
+
         /**
          * This function should not be called outside this library
          * @param l  order of basis function
@@ -132,6 +158,19 @@ namespace irlib {
                 return v_basis_[l].compute_value(y);
             } else {
                 return v_basis_[l].compute_value(-y) * (l % 2 == 0 ? 1 : -1);
+            }
+        }
+
+        mpfr::mpreal vly_derivative_mp(int l, const mpfr::mpreal &y, int order) const throw(std::runtime_error) {
+            assert(y >= -1 && y <= 1);
+            assert(l >= 0 && l < dim());
+            python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
+            python_runtime_check(y >= -1 && y <= 1, "y must be in [-1,1].");
+
+            if (y >= 0) {
+                return v_basis_[l].derivative(y, order);
+            } else {
+                return v_basis_[l].derivative(-y, order) * ((l+order) % 2 == 0 ? 1 : -1);
             }
         }
 #endif

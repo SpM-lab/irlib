@@ -17,9 +17,9 @@ idx = 0
 markers = ['o', 's', 'x', '+', 'v']
 ls = ['-', '--', ':']
 colors = ['r', 'b', 'g', 'k']
-for Lambda in [10000.0]:
+for Lambda in [1000.0]:
     #print("Loading basis functions...")
-    b = irlib.loadtxt("basis_b-mp-Lambda"+str(Lambda)+".txt")
+    b = irlib.loadtxt("basis_f-mp-Lambda"+str(Lambda)+".txt")
 
     print("dim = ", b.dim())
 
@@ -33,6 +33,13 @@ for Lambda in [10000.0]:
 
     plt.figure(3)
     plt.plot([b.sl(l)/b.sl(0) for l in range(b.dim())], marker='+', linestyle='-', color=colors[idx])
+
+    plt.figure(4)
+    #nvec = numpy.array([0, 1, 10, 20,30,40,50,60,70,80,90,10**2, 10**3, 10**4, 10**5, 10**6, 10**7, 10**8])
+    nvec = numpy.arange(1000)
+    Tnl = b.compute_Tnl(nvec)
+    for l in [10, 20]:
+        plt.plot(nvec, numpy.abs(Tnl[:,l]), marker='x', linestyle='-', color=colors[idx], label='l='+str(l))
 
     idx += 1
 
@@ -59,3 +66,12 @@ plt.legend()
 plt.yscale("log")
 plt.tight_layout()
 plt.savefig('sl.pdf')
+
+plt.figure(4)
+plt.xlabel('$n$')
+plt.ylabel('$T_{nl}$')
+plt.legend()
+plt.xscale("log")
+plt.yscale("log")
+plt.tight_layout()
+plt.savefig('Tnl.pdf')

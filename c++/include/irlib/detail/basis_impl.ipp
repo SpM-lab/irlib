@@ -6,6 +6,7 @@
 #include <Eigen/CXX11/Tensor>
 
 #include "../piecewise_polynomial.hpp"
+#include "spline.h"
 
 namespace irlib {
 
@@ -451,7 +452,6 @@ namespace irlib {
     };
 
 
-    /*
     template<typename T, typename Tx>
     piecewise_polynomial<T,Tx> construct_piecewise_polynomial_cspline(
             const std::vector<Tx> &x_array, const std::vector<double> &y_array) {
@@ -477,12 +477,93 @@ namespace irlib {
         piecewise_polynomial<T,Tx> tmp(n_section, x_array, coeff);
         return piecewise_polynomial<T,Tx>(n_section, x_array, coeff);
     };
+
+    /**
+     * Find all zeros of a piecewise polynomial defined on (0,1)
+     * @tparam T
+     * @tparam Tx
+     * @param p
+     * @param delta tolerance
+     * @return
      */
+    template<typename T, typename Tx>
+    std::vector<Tx> find_zeros(
+            const piecewise_polynomial<T,Tx>& p,
+            Tx delta
+    ) {
+        int N = 10000;
+        Tx de_cutoff = 3.0;
+
+        std::vector<Tx> tx_vec = linspace<Tx>(0.0, de_cutoff, N);
+        std::vector<Tx> x_vec(N), zeros;
+        for (int i = 0; i < N; ++i) {
+            x_vec[i] = tanh(0.5 * const_pi<Tx>() * sinh(tx_vec[i]));
+        }
+
+        for (int i = 0; i < N-1; ++i) {
+            if (p(x_vec[i]) * p(x_vec[i+1]) < 0) {
+                Tx x_left = x_vec[i];
+                T p_left = p(x_vec[i]);
+
+                Tx x_right = x_vec[i+1];
+                T p_right = p(x_vec[i+1]);
+
+                while (x_right-x_left > tolerance) {
+                    Tx x_mid = (x_left+x_right)/2;
+                    if (p_left * p(x_mid) > 0) {
+                        x_left = x_mid;
+                    } else {
+                        x_right = x_mid;
+                    }
+                }
+                zeros.push_back((x_left+x_right)/2);
+            }
+        }
+
+        return zeros;
+    };
+
+    template<typename T, typename Tx>
+    std::vector<piecewise_polynomial<double,double> > cspline_approximation(
+            const std::vector<piecewise_polynomial<T,Tx> >& basis_vectors,
+            int Ndiv
+    ) {
+        std::vector<piecewise_polynomial<double,double> > basis_vectors_cspline;
+
+        // Determine sampling points
+        int largest_even_l = 2*((basis_vectors.size()-1)/2);
+        std::vector<Tx> zeros = find_zeros(basis_vectors[largest_even_l]);
+
+        std::vector<double> x;
+
+        auto tmp = linspace<double>(0, static_cast<double>(zeros[0]), Ndiv, false);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(x));
+        for (int i=0; i < zeros.size()-1; ++i) {
+            auto tmp = linspace<double>(static_cast<double>(zeros[i]), static_cast<double>(zeros[i+1]), Ndiv, false);
+            std::copy(tmp.begin(), tmp.end(), std::back_inserter(x));
+        }
+        auto tmp = linspace<double>(static_cast<double>(zeros.back()), 1.0, Ndiv, false);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(x));
+        tmp.push_back(1.0);
+
+        // construct cspline approximation one by one
+        int Nx = x.size()
+        std::vector<double> y(Nx);
+        for (int l=0; l < basis_vectors.size(); ++l) {
+            for (int ix=0; ix<Nx; ++ix) {
+                y[ix] = basis_vectors[l].compute_value(x[ix]);
+            }
+            basis_vectors_cspline.push_back(construct_piecewise_polynomial_cspline(x, y));
+        }
+
+        return basis_vectors_cspline;
+    };
 
     template<typename T>
-    inline std::vector<T> linspace(T minval, T maxval, int N) {
+    inline std::vector<T> linspace(T minval, T maxval, int N, bool include_last_point = true) {
         std::vector<T> r(N);
-        for (int i = 0; i < N; ++i) {
+        int end = include_last_point ? N : N-1;
+        for (int i = 0; i < end; ++i) {
             r[i] = i * (maxval - minval) / (N - T(1)) + minval;
         }
         return r;
