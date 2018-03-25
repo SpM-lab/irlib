@@ -6,9 +6,22 @@
 #include <Eigen/CXX11/Tensor>
 
 #include "../piecewise_polynomial.hpp"
-#include "spline.h"
+#include "spline.hpp"
 
 namespace irlib {
+    //template<typename T>
+    //reutrn
+    template<typename T> T const_pi();
+
+    template<>
+    inline mpfr::mpreal const_pi<mpfr::mpreal>() {
+        return mpfr::const_pi();
+    }
+
+    template<>
+    inline double const_pi<double>() {
+        return M_PI;
+    }
 
     template<typename mp_type>
     std::vector<std::pair<mp_type, mp_type> >
@@ -451,22 +464,29 @@ namespace irlib {
 
     };
 
+    template<typename T>
+    inline std::vector<T> linspace(T minval, T maxval, int N, bool include_last_point = true) {
+        int end = include_last_point ? N : N-1;
+        std::vector<T> r(end);
+        for (int i = 0; i < end; ++i) {
+            r[i] = i * (maxval - minval) / (N - T(1)) + minval;
+        }
+        return r;
+    }
 
-    template<typename T, typename Tx>
-    piecewise_polynomial<T,Tx> construct_piecewise_polynomial_cspline(
-            const std::vector<Tx> &x_array, const std::vector<double> &y_array) {
+
+
+    template<typename T>
+    piecewise_polynomial<T,T> construct_piecewise_polynomial_cspline(
+            const std::vector<T> &x_array, const std::vector<T> &y_array) {
         const int n_points = x_array.size();
         const int n_section = n_points - 1;
 
-        Eigen::MatrixXd coeff(n_section, 4);
+        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> coeff(n_section, 4);
 
         // Cubic spline interpolation
-        tk::spline spline;
-        std::vector<double> x_array_d(x_array.size());
-        for (int i=0; i<x_array.size(); ++i) {
-            x_array_d[i] = static_cast<double>(x_array[i]);
-        }
-        spline.set_points(x_array_d, y_array);
+        tk::spline<T> spline;
+        spline.set_points(x_array, y_array);
 
         // Construct piecewise_polynomial
         for (int s = 0; s < n_section; ++s) {
@@ -474,8 +494,7 @@ namespace irlib {
                 coeff(s, p) = spline.get_coeff(s, p);
             }
         }
-        piecewise_polynomial<T,Tx> tmp(n_section, x_array, coeff);
-        return piecewise_polynomial<T,Tx>(n_section, x_array, coeff);
+        return piecewise_polynomial<T,T>(n_section, x_array, coeff);
     };
 
     /**
@@ -501,16 +520,16 @@ namespace irlib {
         }
 
         for (int i = 0; i < N-1; ++i) {
-            if (p(x_vec[i]) * p(x_vec[i+1]) < 0) {
+            if (p.compute_value(x_vec[i]) * p.compute_value(x_vec[i+1]) < 0) {
                 Tx x_left = x_vec[i];
-                T p_left = p(x_vec[i]);
+                T p_left = p.compute_value(x_vec[i]);
 
                 Tx x_right = x_vec[i+1];
-                T p_right = p(x_vec[i+1]);
+                T p_right = p.compute_value(x_vec[i+1]);
 
-                while (x_right-x_left > tolerance) {
+                while (x_right-x_left > delta) {
                     Tx x_mid = (x_left+x_right)/2;
-                    if (p_left * p(x_mid) > 0) {
+                    if (p_left * p.compute_value(x_mid) > 0) {
                         x_left = x_mid;
                     } else {
                         x_right = x_mid;
@@ -524,50 +543,64 @@ namespace irlib {
     };
 
     template<typename T, typename Tx>
-    std::vector<piecewise_polynomial<double,double> > cspline_approximation(
+    std::vector<piecewise_polynomial<T,Tx> > cspline_approximation(
             const std::vector<piecewise_polynomial<T,Tx> >& basis_vectors,
-            int Ndiv
+            double r_tol
     ) {
-        std::vector<piecewise_polynomial<double,double> > basis_vectors_cspline;
+        std::vector<piecewise_polynomial<T,Tx> > basis_vectors_cspline;
+
 
         // Determine sampling points
+        std::set<Tx> x_set{0.0, 1.0};
         int largest_even_l = 2*((basis_vectors.size()-1)/2);
-        std::vector<Tx> zeros = find_zeros(basis_vectors[largest_even_l]);
+        std::vector<Tx> zeros = find_zeros(basis_vectors[largest_even_l], static_cast<Tx>(1e-10));
+        std::copy(zeros.begin(), zeros.end(), std::inserter(x_set, x_set.begin()));
+        std::vector<Tx> x(x_set.size());
+        std::vector<Tx> y(x_set.size());
+        while (true) {
+    //std::cout << "debug " << x_set.size() << std::endl;
+            // construct cubic spline interpolation of the highest-l basis function
+            int index = 0;
+            x.resize(x_set.size());
+            y.resize(x_set.size());
+            for (auto it=x_set.begin(); it != x_set.end(); ++it) {
+                x[index] = *it;
+                y[index] = basis_vectors.back().compute_value(*it);
+                ++ index;
+            }
+            auto cspline = construct_piecewise_polynomial_cspline<T>(x, y);
 
-        std::vector<double> x;
+            // check convergence
+            for (int i=0; i < x.size()-1; ++i) {
+                auto x_mid = (x[i]+x[i+1])/2;
+                auto diff = std::abs(static_cast<double>(
+                                             (cspline.compute_value(x_mid)-basis_vectors.back().compute_value(x_mid))/
+                                                     basis_vectors.back().compute_value(1)
+                                     ));
+                if (diff > r_tol) {
+                    //std::cout << "add " << x_mid << " " << diff << std::endl;
+                    x_set.insert(x_mid);
+                }
+            }
 
-        auto tmp = linspace<double>(0, static_cast<double>(zeros[0]), Ndiv, false);
-        std::copy(tmp.begin(), tmp.end(), std::back_inserter(x));
-        for (int i=0; i < zeros.size()-1; ++i) {
-            auto tmp = linspace<double>(static_cast<double>(zeros[i]), static_cast<double>(zeros[i+1]), Ndiv, false);
-            std::copy(tmp.begin(), tmp.end(), std::back_inserter(x));
+            if (x_set.size() == x.size()) {
+                break;
+            }
         }
-        auto tmp = linspace<double>(static_cast<double>(zeros.back()), 1.0, Ndiv, false);
-        std::copy(tmp.begin(), tmp.end(), std::back_inserter(x));
-        tmp.push_back(1.0);
+
+        int Nx = x.size();
 
         // construct cspline approximation one by one
-        int Nx = x.size()
-        std::vector<double> y(Nx);
         for (int l=0; l < basis_vectors.size(); ++l) {
             for (int ix=0; ix<Nx; ++ix) {
+                //std::cout << " final x " << std::setprecision(20) << x[ix] << std::endl;
                 y[ix] = basis_vectors[l].compute_value(x[ix]);
             }
-            basis_vectors_cspline.push_back(construct_piecewise_polynomial_cspline(x, y));
+            basis_vectors_cspline.push_back(construct_piecewise_polynomial_cspline<T>(x, y));
         }
 
         return basis_vectors_cspline;
     };
-
-    template<typename T>
-    inline std::vector<T> linspace(T minval, T maxval, int N, bool include_last_point = true) {
-        std::vector<T> r(N);
-        int end = include_last_point ? N : N-1;
-        for (int i = 0; i < end; ++i) {
-            r[i] = i * (maxval - minval) / (N - T(1)) + minval;
-        }
-        return r;
-    }
 
     //Compute nodes (zeros) of Legendre polynomials
     inline std::vector<double> compute_legendre_nodes(int l) {
@@ -672,19 +705,6 @@ namespace irlib {
         }
     }
 
-    //template<typename T>
-    //reutrn
-    template<typename T> T const_pi();
-
-    template<>
-    inline mpfr::mpreal const_pi<mpfr::mpreal>() {
-        return mpfr::const_pi();
-    }
-
-    template<>
-    inline double const_pi<double>() {
-        return M_PI;
-    }
 
 /**
  * Compute integral of exponential functions and given piecewise polynomials

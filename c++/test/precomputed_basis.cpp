@@ -20,14 +20,34 @@ to_dcomplex(std::complex<mpreal>& z) {
 
 TEST(precomputed_basis, cubic_spline) {
     auto b = loadtxt("basis_f-mp-Lambda10000.0.txt");
+    ir_set_default_prec<mpreal>(b.get_prec());
     auto dim = b.dim();
 
     std::vector<piecewise_polynomial<mpreal,mpreal> > basis_vectors_org;
+    std::vector<double> sl;
     for (int l=0; l<dim; ++l) {
-        basis_vectors_org.push_back(b.ulx(l));
+        basis_vectors_org.push_back(b.ul(l));
+        sl.push_back(b.sl(l)/b.sl(0));
     }
 
-    auto basis_vectors_cs =  cspline_approximation(basis_vectors, 5);
+    int dim_check = std::count_if(sl.begin(), sl.end(), [](const double& sl){return sl > 1e-8;});
+
+    auto xvec = linspace<double>(0.99, 1, 1000);
+    for (auto x : xvec) {
+        int l = dim_check -1;
+        auto diff = basis_vectors_org[l].template compute_value<mpreal>(x) - basis_vectors_org[l].template compute_value<double>(x);
+        ASSERT_TRUE(std::abs(static_cast<double>(diff)) < 1e-10);
+    }
+
+    auto basis_vectors_cs =  cspline_approximation(basis_vectors_org, 1e-8);
+
+    for (int l=0; l<dim_check; ++l) {
+        for (auto x : xvec) {
+            auto diff = basis_vectors_org[l].compute_value(x) -  basis_vectors_cs[l].compute_value(x);
+            ASSERT_TRUE(std::abs(static_cast<double>(diff)) < 1e-5);
+        }
+    }
+
 }
 
 TEST(precomputed_basis, Tnl) {

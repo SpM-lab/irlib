@@ -274,11 +274,12 @@ namespace irlib {
         }
 
         /// Compute the value at x.
-        inline Tx compute_value(Tx x) const {
+        template<typename Tw = Tx>
+        inline T compute_value(Tx x) const {
 #ifndef NDEBUG
             check_validity();
 #endif
-            return compute_value(x, find_section(x));
+            return compute_value<Tw>(x, find_section(x));
         }
 
         inline Tx derivative(Tx x, int order) const {
@@ -310,19 +311,20 @@ namespace irlib {
         }
 
         /// Compute the value at x. x must be in the given section.
-        inline Tx compute_value(Tx x, int section) const {
+        template<typename Tw = Tx>
+        inline T compute_value(Tx x, int section) const {
 #ifndef NDEBUG
             check_validity();
 #endif
             assert (x >= section_edges_[section] && x <= section_edges_[section + 1]);
 
-            auto dx = x - section_edges_[section];
-            Tx r = 0.0, x_pow = 1.0;
+            Tw dx = static_cast<Tw>(x) - static_cast<Tw>(section_edges_[section]);
+            Tw r = 0.0, x_pow = 1.0;
             for (int p = 0; p < k_ + 1; ++p) {
-                r += coeff_(section, p) * x_pow;
+                r += static_cast<Tw>(coeff_(section, p)) * x_pow;
                 x_pow *= dx;
             }
-            return r;
+            return static_cast<T>(r);
         }
 
         /// Find the section involving the given x

@@ -42,11 +42,12 @@ namespace tk
 {
 
 // band matrix solver
+template<typename T>
 class band_matrix
 {
 private:
-    std::vector< std::vector<double> > m_upper;  // upper band
-    std::vector< std::vector<double> > m_lower;  // lower band
+    std::vector< std::vector<T> > m_upper;  // upper band
+    std::vector< std::vector<T> > m_lower;  // lower band
 public:
     band_matrix() {};                             // constructor
     band_matrix(int dim, int n_u, int n_l);       // constructor
@@ -62,21 +63,22 @@ public:
         return m_lower.size()-1;
     }
     // access operator
-    double & operator () (int i, int j);            // write
-    double   operator () (int i, int j) const;      // read
+    T & operator () (int i, int j);            // write
+    T   operator () (int i, int j) const;      // read
     // we can store an additional diogonal (in m_lower)
-    double& saved_diag(int i);
-    double  saved_diag(int i) const;
+    T& saved_diag(int i);
+    T  saved_diag(int i) const;
     void lu_decompose();
-    std::vector<double> r_solve(const std::vector<double>& b) const;
-    std::vector<double> l_solve(const std::vector<double>& b) const;
-    std::vector<double> lu_solve(const std::vector<double>& b,
+    std::vector<T> r_solve(const std::vector<T>& b) const;
+    std::vector<T> l_solve(const std::vector<T>& b) const;
+    std::vector<T> lu_solve(const std::vector<T>& b,
                                  bool is_lu_decomposed=false);
 
 };
 
 
 // spline interpolation
+template<typename T>
 class spline
 {
 public:
@@ -86,13 +88,13 @@ public:
     };
 
 private:
-    std::vector<double> m_x,m_y;            // x,y coordinates of points
+    std::vector<T> m_x,m_y;            // x,y coordinates of points
     // interpolation parameters
     // f(x) = a*(x-x_i)^3 + b*(x-x_i)^2 + c*(x-x_i) + y_i
-    std::vector<double> m_a,m_b,m_c;        // spline coefficients
-    double  m_b0, m_c0;                     // for left extrapol
+    std::vector<T> m_a,m_b,m_c;        // spline coefficients
+    T  m_b0, m_c0;                     // for left extrapol
     bd_type m_left, m_right;
-    double  m_left_value, m_right_value;
+    T  m_left_value, m_right_value;
     bool    m_force_linear_extrapolation;
 
 public:
@@ -105,13 +107,15 @@ public:
     }
 
     // optional, but if called it has to come be before set_points()
-    void set_boundary(bd_type left, double left_value,
-                      bd_type right, double right_value,
+    void set_boundary(bd_type left, T left_value,
+                      bd_type right, T right_value,
                       bool force_linear_extrapolation=false);
-    void set_points(const std::vector<double>& x,
-                    const std::vector<double>& y, bool cubic_spline=true);
-    double operator() (double x) const;
-    double deriv(int order, double x) const;
+    void set_points(const std::vector<T>& x,
+                    const std::vector<T>& y, bool cubic_spline=true);
+    T operator() (T x) const;
+
+    //Added by H. Shinaoka
+    T get_coeff(int point, int power) const;
 };
 
 
@@ -124,11 +128,13 @@ public:
 // band_matrix implementation
 // -------------------------
 
-band_matrix::band_matrix(int dim, int n_u, int n_l)
+template<typename T>
+band_matrix<T>::band_matrix(int dim, int n_u, int n_l)
 {
     resize(dim, n_u, n_l);
 }
-void band_matrix::resize(int dim, int n_u, int n_l)
+template<typename T>
+void band_matrix<T>::resize(int dim, int n_u, int n_l)
 {
     assert(dim>0);
     assert(n_u>=0);
@@ -142,7 +148,8 @@ void band_matrix::resize(int dim, int n_u, int n_l)
         m_lower[i].resize(dim);
     }
 }
-int band_matrix::dim() const
+template<typename T>
+int band_matrix<T>::dim() const
 {
     if(m_upper.size()>0) {
         return m_upper[0].size();
@@ -154,7 +161,8 @@ int band_matrix::dim() const
 
 // defines the new operator (), so that we can access the elements
 // by A(i,j), index going from i=0,...,dim()-1
-double & band_matrix::operator () (int i, int j)
+template<typename T>
+T & band_matrix<T>::operator () (int i, int j)
 {
     int k=j-i;       // what band is the entry
     assert( (i>=0) && (i<dim()) && (j>=0) && (j<dim()) );
@@ -163,7 +171,8 @@ double & band_matrix::operator () (int i, int j)
     if(k>=0)   return m_upper[k][i];
     else	    return m_lower[-k][i];
 }
-double band_matrix::operator () (int i, int j) const
+template<typename T>
+T band_matrix<T>::operator () (int i, int j) const
 {
     int k=j-i;       // what band is the entry
     assert( (i>=0) && (i<dim()) && (j>=0) && (j<dim()) );
@@ -173,23 +182,26 @@ double band_matrix::operator () (int i, int j) const
     else	    return m_lower[-k][i];
 }
 // second diag (used in LU decomposition), saved in m_lower
-double band_matrix::saved_diag(int i) const
+template<typename T>
+T band_matrix<T>::saved_diag(int i) const
 {
     assert( (i>=0) && (i<dim()) );
     return m_lower[0][i];
 }
-double & band_matrix::saved_diag(int i)
+template<typename T>
+T & band_matrix<T>::saved_diag(int i)
 {
     assert( (i>=0) && (i<dim()) );
     return m_lower[0][i];
 }
 
 // LR-Decomposition of a band matrix
-void band_matrix::lu_decompose()
+template<typename T>
+void band_matrix<T>::lu_decompose()
 {
     int  i_max,j_max;
     int  j_min;
-    double x;
+    T x;
 
     // preconditioning
     // normalize column i so that a_ii=1
@@ -220,12 +232,13 @@ void band_matrix::lu_decompose()
     }
 }
 // solves Ly=b
-std::vector<double> band_matrix::l_solve(const std::vector<double>& b) const
+template<typename T>
+std::vector<T> band_matrix<T>::l_solve(const std::vector<T>& b) const
 {
     assert( this->dim()==(int)b.size() );
-    std::vector<double> x(this->dim());
+    std::vector<T> x(this->dim());
     int j_start;
-    double sum;
+    T sum;
     for(int i=0; i<this->dim(); i++) {
         sum=0;
         j_start=std::max(0,i-this->num_lower());
@@ -235,12 +248,13 @@ std::vector<double> band_matrix::l_solve(const std::vector<double>& b) const
     return x;
 }
 // solves Rx=y
-std::vector<double> band_matrix::r_solve(const std::vector<double>& b) const
+template<typename T>
+std::vector<T> band_matrix<T>::r_solve(const std::vector<T>& b) const
 {
     assert( this->dim()==(int)b.size() );
-    std::vector<double> x(this->dim());
+    std::vector<T> x(this->dim());
     int j_stop;
-    double sum;
+    T sum;
     for(int i=this->dim()-1; i>=0; i--) {
         sum=0;
         j_stop=std::min(this->dim()-1,i+this->num_upper());
@@ -250,11 +264,12 @@ std::vector<double> band_matrix::r_solve(const std::vector<double>& b) const
     return x;
 }
 
-std::vector<double> band_matrix::lu_solve(const std::vector<double>& b,
+template<typename T>
+std::vector<T> band_matrix<T>::lu_solve(const std::vector<T>& b,
         bool is_lu_decomposed)
 {
     assert( this->dim()==(int)b.size() );
-    std::vector<double>  x,y;
+    std::vector<T>  x,y;
     if(is_lu_decomposed==false) {
         this->lu_decompose();
     }
@@ -269,8 +284,9 @@ std::vector<double> band_matrix::lu_solve(const std::vector<double>& b,
 // spline implementation
 // -----------------------
 
-void spline::set_boundary(spline::bd_type left, double left_value,
-                          spline::bd_type right, double right_value,
+template<typename T>
+void spline<T>::set_boundary(spline<T>::bd_type left, T left_value,
+                          spline<T>::bd_type right, T right_value,
                           bool force_linear_extrapolation)
 {
     assert(m_x.size()==0);          // set_points() must not have happened yet
@@ -282,8 +298,9 @@ void spline::set_boundary(spline::bd_type left, double left_value,
 }
 
 
-void spline::set_points(const std::vector<double>& x,
-                        const std::vector<double>& y, bool cubic_spline)
+template<typename T>
+void spline<T>::set_points(const std::vector<T>& x,
+                        const std::vector<T>& y, bool cubic_spline)
 {
     assert(x.size()==y.size());
     assert(x.size()>2);
@@ -298,8 +315,8 @@ void spline::set_points(const std::vector<double>& x,
     if(cubic_spline==true) { // cubic spline interpolation
         // setting up the matrix and right hand side of the equation system
         // for the parameters b[]
-        band_matrix A(n,1,1);
-        std::vector<double>  rhs(n);
+        band_matrix<T> A(n,1,1);
+        std::vector<T>  rhs(n);
         for(int i=1; i<n-1; i++) {
             A(i,i-1)=1.0/3.0*(x[i]-x[i-1]);
             A(i,i)=2.0/3.0*(x[i+1]-x[i-1]);
@@ -307,12 +324,12 @@ void spline::set_points(const std::vector<double>& x,
             rhs[i]=(y[i+1]-y[i])/(x[i+1]-x[i]) - (y[i]-y[i-1])/(x[i]-x[i-1]);
         }
         // boundary conditions
-        if(m_left == spline::second_deriv) {
+        if(m_left == spline<T>::second_deriv) {
             // 2*b[0] = f''
             A(0,0)=2.0;
             A(0,1)=0.0;
             rhs[0]=m_left_value;
-        } else if(m_left == spline::first_deriv) {
+        } else if(m_left == spline<T>::first_deriv) {
             // c[0] = f', needs to be re-expressed in terms of b:
             // (2b[0]+b[1])(x[1]-x[0]) = 3 ((y[1]-y[0])/(x[1]-x[0]) - f')
             A(0,0)=2.0*(x[1]-x[0]);
@@ -321,12 +338,12 @@ void spline::set_points(const std::vector<double>& x,
         } else {
             assert(false);
         }
-        if(m_right == spline::second_deriv) {
+        if(m_right == spline<T>::second_deriv) {
             // 2*b[n-1] = f''
             A(n-1,n-1)=2.0;
             A(n-1,n-2)=0.0;
             rhs[n-1]=m_right_value;
-        } else if(m_right == spline::first_deriv) {
+        } else if(m_right == spline<T>::first_deriv) {
             // c[n-1] = f', needs to be re-expressed in terms of b:
             // (b[n-2]+2b[n-1])(x[n-1]-x[n-2])
             // = 3 (f' - (y[n-1]-y[n-2])/(x[n-1]-x[n-2]))
@@ -365,7 +382,7 @@ void spline::set_points(const std::vector<double>& x,
 
     // for the right extrapolation coefficients
     // f_{n-1}(x) = b*(x-x_{n-1})^2 + c*(x-x_{n-1}) + y_{n-1}
-    double h=x[n-1]-x[n-2];
+    T h=x[n-1]-x[n-2];
     // m_b[n-1] is determined by the boundary condition
     m_a[n-1]=0.0;
     m_c[n-1]=3.0*m_a[n-2]*h*h+2.0*m_b[n-2]*h+m_c[n-2];   // = f'_{n-2}(x_{n-1})
@@ -373,16 +390,17 @@ void spline::set_points(const std::vector<double>& x,
         m_b[n-1]=0.0;
 }
 
-double spline::operator() (double x) const
+template<typename T>
+T spline<T>::operator() (T x) const
 {
     size_t n=m_x.size();
     // find the closest point m_x[idx] < x, idx=0 even if x<m_x[0]
-    std::vector<double>::const_iterator it;
+    typename std::vector<T>::const_iterator it;
     it=std::lower_bound(m_x.begin(),m_x.end(),x);
     int idx=std::max( int(it-m_x.begin())-1, 0);
 
-    double h=x-m_x[idx];
-    double interpol;
+    T h=x-m_x[idx];
+    T interpol;
     if(x<m_x[0]) {
         // extrapolation to the left
         interpol=(m_b0*h + m_c0)*h + m_y[0];
@@ -396,62 +414,21 @@ double spline::operator() (double x) const
     return interpol;
 }
 
-double spline::deriv(int order, double x) const
-{
-    assert(order>0);
-
-    size_t n=m_x.size();
-    // find the closest point m_x[idx] < x, idx=0 even if x<m_x[0]
-    std::vector<double>::const_iterator it;
-    it=std::lower_bound(m_x.begin(),m_x.end(),x);
-    int idx=std::max( int(it-m_x.begin())-1, 0);
-
-    double h=x-m_x[idx];
-    double interpol;
-    if(x<m_x[0]) {
-        // extrapolation to the left
-        switch(order) {
-        case 1:
-            interpol=2.0*m_b0*h + m_c0;
-            break;
-        case 2:
-            interpol=2.0*m_b0*h;
-            break;
-        default:
-            interpol=0.0;
-            break;
-        }
-    } else if(x>m_x[n-1]) {
-        // extrapolation to the right
-        switch(order) {
-        case 1:
-            interpol=2.0*m_b[n-1]*h + m_c[n-1];
-            break;
-        case 2:
-            interpol=2.0*m_b[n-1];
-            break;
-        default:
-            interpol=0.0;
-            break;
-        }
+template<typename T>
+T spline<T>::get_coeff(int idx, int power) const {
+    assert(idx >= 0);
+    assert(idx < m_y.size());
+    if (power == 0) {
+        return m_y[idx];
+    } else if (power == 1) {
+        return m_c[idx];
+    } else if (power == 2) {
+        return m_b[idx];
+    } else if (power == 3) {
+        return m_a[idx];
     } else {
-        // interpolation
-        switch(order) {
-        case 1:
-            interpol=(3.0*m_a[idx]*h + 2.0*m_b[idx])*h + m_c[idx];
-            break;
-        case 2:
-            interpol=6.0*m_a[idx]*h + 2.0*m_b[idx];
-            break;
-        case 3:
-            interpol=6.0*m_a[idx];
-            break;
-        default:
-            interpol=0.0;
-            break;
-        }
+        throw std::invalid_argument("invalid value of power");
     }
-    return interpol;
 }
 
 

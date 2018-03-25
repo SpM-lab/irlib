@@ -218,6 +218,10 @@ namespace irlib {
          */
         int dim() const { return u_basis_.size(); }
 
+        mpfr_prec_t get_prec() const {
+            return ul(0).section_edge(0).get_prec();
+        }
+
         /// Return statistics
         irlib::statistics::statistics_type get_statistics() const {
             return statistics_;
