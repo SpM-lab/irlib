@@ -17,8 +17,8 @@ idx = 0
 markers = ['o', 's', 'x', '+', 'v']
 ls = ['-', '--', ':']
 colors = ['r', 'b', 'g', 'k']
-for Lambda in [10000.0]:
-    b_np8 = irlib.loadtxt("np8/basis_f-mp-Lambda"+str(Lambda)+".txt")
+for Lambda in [1000.0]:
+    b_np8 = irlib.loadtxt("np20/basis_f-mp-Lambda"+str(Lambda)+".txt")
     b_np10 = irlib.loadtxt("np10/basis_f-mp-Lambda"+str(Lambda)+".txt")
 
     print("dim = ", b_np8.dim(), b_np10.dim())

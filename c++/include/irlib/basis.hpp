@@ -122,6 +122,41 @@ namespace irlib {
 
 
         /**
+         * Direct access to coefficients of u_l(x)
+         */
+        double ulx_coeff(int l, int section, int p) const {
+            assert(l >= 0 && l < dim());
+            return static_cast<double>(u_basis_[l].coefficient(section, p));
+        }
+
+        /**
+         * Direct access to coefficients of v_l(y)
+         */
+        double vly_coeff(int l, int section, int p) const {
+            assert(l >= 0 && l < dim());
+            return static_cast<double>(v_basis_[l].coefficient(section, p));
+        }
+
+        /**
+         * Access to sections
+         */
+        int num_sections_ulx() const {
+            return u_basis_[0].num_sections();
+        }
+
+        int num_sections_vly() const {
+            return v_basis_[0].num_sections();
+        }
+
+        int section_edge_ulx(int i) const {
+            return static_cast<double>(u_basis_[0].section_edge(i));
+        }
+
+        int section_edge_vly(int i) const {
+            return static_cast<double>(v_basis_[0].section_edge(i));
+        }
+
+        /**
          * This function should not be called outside this library
          * @param l  order of basis function
          * @param x  x on [-1,1]
