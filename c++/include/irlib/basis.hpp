@@ -124,7 +124,7 @@ namespace irlib {
         /**
          * Direct access to coefficients of u_l(x)
          */
-        double ulx_coeff(int l, int section, int p) const {
+        double coeff_ulx(int l, int section, int p) const {
             assert(l >= 0 && l < dim());
             return static_cast<double>(u_basis_[l].coefficient(section, p));
         }
@@ -132,7 +132,7 @@ namespace irlib {
         /**
          * Direct access to coefficients of v_l(y)
          */
-        double vly_coeff(int l, int section, int p) const {
+        double coeff_vly(int l, int section, int p) const {
             assert(l >= 0 && l < dim());
             return static_cast<double>(v_basis_[l].coefficient(section, p));
         }
@@ -154,6 +154,14 @@ namespace irlib {
 
         int section_edge_vly(int i) const {
             return static_cast<double>(v_basis_[0].section_edge(i));
+        }
+
+        int num_local_poly_ulx() const {
+            return u_basis_[0].order();
+        }
+
+        int num_local_poly_vly() const {
+            return v_basis_[0].order();
         }
 
         /**
