@@ -53,6 +53,17 @@ namespace irlib {
         std::vector<mpfr::mpreal> sv_;
         std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> u_basis_, v_basis_;
 
+        mutable mp_prec_t default_prec_bak;
+
+        void save_default_prec() const {
+            default_prec_bak = mpfr::mpreal::get_default_prec();
+            mpfr::mpreal::set_default_prec(get_prec());
+        }
+
+        void restore_default_prec() const {
+            mpfr::mpreal::set_default_prec(default_prec_bak);
+        }
+
     public:
         /**
          * Compute the values of the basis functions for a given x.
@@ -123,11 +134,18 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(x >= -1 && x <= 1, "x must be in [-1,1].");
 
+            save_default_prec();
+
+            mpfr:mpreal r;
             if (x >= 0) {
-                return u_basis_[l].compute_value(x);
+                r = u_basis_[l].compute_value(x);
             } else {
-                return u_basis_[l].compute_value(-x) * (l % 2 == 0 ? 1 : -1);
+                r = u_basis_[l].compute_value(-x) * (l % 2 == 0 ? 1 : -1);
             }
+
+            restore_default_prec();
+
+            return r;
         }
 
         mpfr::mpreal ulx_derivative_mp(int l, const mpfr::mpreal &x, int order) const throw(std::runtime_error) {
@@ -136,11 +154,18 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(x >= -1 && x <= 1, "x must be in [-1,1].");
 
+            save_default_prec();
+
+            mpfr::mpreal r;
             if (x >= 0) {
-                return u_basis_[l].derivative(x, order);
+                r = u_basis_[l].derivative(x, order);
             } else {
-                return u_basis_[l].derivative(-x, order) * ((l+order) % 2 == 0 ? 1 : -1);
+                r = u_basis_[l].derivative(-x, order) * ((l+order) % 2 == 0 ? 1 : -1);
             }
+
+            restore_default_prec();
+
+            return r;
         }
 
         /**
@@ -154,11 +179,19 @@ namespace irlib {
             assert(l >= 0 && l < dim());
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(y >= -1 && y <= 1, "y must be in [-1,1].");
+
+            save_default_prec();
+
+            mpfr::mpreal r;
             if (y >= 0) {
-                return v_basis_[l].compute_value(y);
+                r = v_basis_[l].compute_value(y);
             } else {
-                return v_basis_[l].compute_value(-y) * (l % 2 == 0 ? 1 : -1);
+                r = v_basis_[l].compute_value(-y) * (l % 2 == 0 ? 1 : -1);
             }
+
+            restore_default_prec();
+
+            return r;
         }
 
         mpfr::mpreal vly_derivative_mp(int l, const mpfr::mpreal &y, int order) const throw(std::runtime_error) {
@@ -167,11 +200,18 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(y >= -1 && y <= 1, "y must be in [-1,1].");
 
+            save_default_prec();
+
+            mpfr::mpreal r;
             if (y >= 0) {
-                return v_basis_[l].derivative(y, order);
+                r = v_basis_[l].derivative(y, order);
             } else {
-                return v_basis_[l].derivative(-y, order) * ((l+order) % 2 == 0 ? 1 : -1);
+                r = v_basis_[l].derivative(-y, order) * ((l+order) % 2 == 0 ? 1 : -1);
             }
+
+            restore_default_prec();
+
+            return r;
         }
 #endif
 
@@ -239,6 +279,8 @@ namespace irlib {
                 const std::vector<long> &n_vec,
                 Eigen::Tensor<std::complex<double>, 2> &Tnl
         ) const {
+            save_default_prec();
+
             auto trans_to_non_negative = [&](long n) {
                 if (n >= 0) {
                     return n;
@@ -280,6 +322,8 @@ namespace irlib {
                     }
                 }
             }
+
+            restore_default_prec();
         }
 
 #endif
@@ -305,7 +349,7 @@ namespace irlib {
                         int max_dim = 1000,
                         double cutoff = 1e-8,
                         const std::string& fp_mode="mp",
-                        double a_tol = 1e-6,
+                        double r_tol = 1e-6,
                         long prec = 64,
                         int n_local_poly = 10,
                         int num_nodes_gauss_legendre = 24,
@@ -317,10 +361,10 @@ namespace irlib {
 
         // Increase default precision if needed
         auto min_prec = std::max(
-                mpfr::digits2bits(std::log10(1/cutoff)+2*std::log10(1/a_tol)),
+                mpfr::digits2bits(std::log10(1/cutoff)+2*std::log10(1/r_tol)),
                 long(64)//At least 19 digits
         );
-        //min_prec = std::max(min_prec, mpfr::digits2bits(std::log10(1/a_tol))+10);
+        //min_prec = std::max(min_prec, mpfr::digits2bits(std::log10(1/r_tol))+10);
         min_prec = std::max(min_prec, prec);
         if (min_prec > mpfr::mpreal::get_default_prec()) {
             mpfr::mpreal::set_default_prec(min_prec);
@@ -332,10 +376,10 @@ namespace irlib {
         if (fp_mode == "mp") {
             if (s == statistics::FERMIONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpfr::mpreal>(
-                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
+                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
             } else if (s == statistics::BOSONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpfr::mpreal>(
-                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
+                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
             }
         } else if (fp_mode == "long double") {
             if (cutoff < 1e-8) {
@@ -343,10 +387,10 @@ namespace irlib {
             }
             if (s == statistics::FERMIONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<long double>(
-                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
+                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
             } else if (s == statistics::BOSONIC) {
                 std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<long double>(
-                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, a_tol, n_local_poly, num_nodes_gauss_legendre);
+                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
             }
         } else {
             throw std::runtime_error("Unknown fp_mode " + fp_mode + ". Only 'mp' is supported.");

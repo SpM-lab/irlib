@@ -17,7 +17,7 @@ idx = 0
 markers = ['o', 's', 'x', '+', 'v']
 ls = ['-', '--', ':']
 colors = ['r', 'b', 'g', 'k']
-for Lambda in [10.0]:
+for Lambda in [10000.0]:
     #print("Loading basis functions...")
     b = irlib.loadtxt("np10/basis_f-mp-Lambda"+str(Lambda)+".txt")
 
@@ -35,8 +35,8 @@ for Lambda in [10.0]:
     plt.plot([b.sl(l)/b.sl(0) for l in range(b.dim())], marker='+', linestyle='-', color=colors[idx])
 
     plt.figure(4)
-    #nvec = numpy.array([0, 1, 10, 20,30,40,50,60,70,80,90,10**2, 10**3, 10**4, 10**5, 10**6, 10**7, 10**8])
-    nvec = numpy.arange(100)
+    nvec = numpy.array([0, 1, 10, 20,30,40,50,60,70,80,90,10**2, 10**3, 10**4, 10**5, 10**6, 10**7, 10**8])
+    #nvec = numpy.arange(100)
     Tnl = b.compute_Tnl(nvec)
     for l in [b.dim()-1]:
         plt.plot(nvec, numpy.abs(Tnl[:,l]), marker='x', linestyle='-', color='r', label='l='+str(l))

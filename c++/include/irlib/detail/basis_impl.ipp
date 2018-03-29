@@ -354,20 +354,20 @@ namespace irlib {
 
         residual_x.resize(section_edges_x.size() - 1);
         residual_y.resize(section_edges_y.size() - 1);
-        std::fill(residual_x.begin(), residual_x.end(), 0.0);
-        std::fill(residual_y.begin(), residual_y.end(), 0.0);
+        //std::fill(residual_x.begin(), residual_x.end(), 0.0);
+        ////std::fill(residual_y.begin(), residual_y.end(), 0.0);
 
-        for (int l = 0; l < Uvec.size(); ++l) {
+        {
+            auto l = Uvec.size() -1;
             for (int s = 0; s < residual_x.size(); ++s) {
                 double dx = static_cast<double>(section_edges_x[s+1]-section_edges_x[s]);
                 double a_diff = static_cast<double>(Uvec[l](s * num_local_poly + num_local_poly - 1)) * std::sqrt((2.*l+1)/dx);
-                residual_x[s] = std::max(residual_x[s], std::abs(a_diff));
+                residual_x[s] = std::abs(a_diff);
             }
-
             for (int s = 0; s < residual_y.size(); ++s) {
                 double dy = static_cast<double>(section_edges_y[s+1]-section_edges_y[s]);
                 double a_diff = static_cast<double>(Vvec[l](s * num_local_poly + num_local_poly - 1)) * std::sqrt((2.*l+1)/dy);
-                residual_y[s] = std::max(residual_y[s], std::abs(a_diff));
+                residual_y[s] = std::abs(a_diff);
             }
         }
 
@@ -385,7 +385,7 @@ namespace irlib {
             int max_dim,
             double sv_cutoff = 1e-12,
             bool verbose = false,
-            double a_tol = 1e-6,
+            double r_tol = 1e-6,
             int num_local_poly = 10,
             int num_nodes_gauss_legendre = 24
     ) throw(std::runtime_error) {
@@ -444,8 +444,18 @@ namespace irlib {
             );
             int ns = section_edges_x.size() + section_edges_y.size();
 
-            section_edges_x = u(section_edges_x, residual_x, a_tol);
-            section_edges_y = u(section_edges_y, residual_y, a_tol);
+            int dim = std::get<1>(r).size();
+
+            auto a_tol_x = r_tol * std::abs(
+                    static_cast<double>(std::get<1>(r).back().compute_value(1))
+            );
+            auto a_tol_y = r_tol * std::max(
+                    std::abs(static_cast<double>(std::get<2>(r)[2*(dim/2)-1].compute_value(1))),
+                    std::abs(static_cast<double>(std::get<2>(r)[2*(dim/2)-1].compute_value(0)))
+            );
+
+            section_edges_x = u(section_edges_x, residual_x, a_tol_x);
+            section_edges_y = u(section_edges_y, residual_y, a_tol_y);
 
             if (verbose) {
                 std::cout << "Iteration " << ite+1 << " : found " << std::get<1>(r).size() <<  " basis functions. " << std::endl;
@@ -558,7 +568,6 @@ namespace irlib {
         std::vector<Tx> x(x_set.size());
         std::vector<Tx> y(x_set.size());
         while (true) {
-    //std::cout << "debug " << x_set.size() << std::endl;
             // construct cubic spline interpolation of the highest-l basis function
             int index = 0;
             x.resize(x_set.size());
