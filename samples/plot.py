@@ -21,7 +21,7 @@ for Lambda in [10.0]:
     #print("Loading basis functions...")
     b = irlib.loadtxt("np10/basis_f-mp-Lambda"+str(Lambda)+".txt")
 
-    print("dim = ", b.dim(), b20.dim())
+    print("dim = ", b.dim())
 
     plt.figure(1)
     for l in [b.dim()-1]:
