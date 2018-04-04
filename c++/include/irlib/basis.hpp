@@ -148,11 +148,11 @@ namespace irlib {
             return v_basis_[0].num_sections();
         }
 
-        int section_edge_ulx(int i) const {
+        double section_edge_ulx(int i) const {
             return static_cast<double>(u_basis_[0].section_edge(i));
         }
 
-        int section_edge_vly(int i) const {
+        double section_edge_vly(int i) const {
             return static_cast<double>(v_basis_[0].section_edge(i));
         }
 
