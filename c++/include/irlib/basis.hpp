@@ -305,14 +305,14 @@ namespace irlib {
             return ul(0).section_edge(0).get_prec();
         }
 
-#ifndef SWIG //DO NOT EXPOSE TO PYTHON
+#if !defined(SWIG) && !defined(SWIGPYTHON)  //DO NOT EXPOSE TO PYTHON
         /// Return statistics
         irlib::statistics::statistics_type get_statistics() const {
             return statistics_;
         }
 #endif
 
-#ifdef SWIG //PYTHON
+#if defined(SWIG) || defined(SWIGPYTHON) //PYTHON
         std::string get_statistics() const {
             return statistics_ == statistics::FERMIONIC ? "F" : "B" ;
         }
