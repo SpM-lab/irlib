@@ -53,15 +53,16 @@ namespace irlib {
         std::vector<mpfr::mpreal> sv_;
         std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> u_basis_, v_basis_;
 
-        mutable mp_prec_t default_prec_bak;
+        //mutable mp_prec_t default_prec_bak;
 
-        void save_default_prec() const {
-            default_prec_bak = mpfr::mpreal::get_default_prec();
+        mp_prec_t save_default_prec() const {
+            mp_prec_t default_prec_bak = mpfr::mpreal::get_default_prec();
             mpfr::mpreal::set_default_prec(get_prec());
+            return default_prec_bak;
         }
 
-        void restore_default_prec() const {
-            mpfr::mpreal::set_default_prec(default_prec_bak);
+        void restore_default_prec(mp_prec_t prec) const {
+            mpfr::mpreal::set_default_prec(prec);
         }
 
     public:
@@ -94,13 +95,23 @@ namespace irlib {
         double ulx(int l, double x) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
-            return static_cast<double>(ulx_mp(l, mpfr::mpreal(x)));
+            auto bak = save_default_prec();
+
+            //auto val = ulx_mp(l, mpfr::mpreal(x));
+            //auto r = static_cast<double>(val);
+
+            auto r = static_cast<double>(ulx_mp(l, mpfr::mpreal(x)));
+            restore_default_prec(bak);
+            return r;
         }
 
         double ulx_derivative(int l, double x, int order) const throw(std::runtime_error) {
             assert(x >= -1 && x <= 1);
             assert(l >= 0 && l < dim());
-            return static_cast<double>(ulx_derivative_mp(l, mpfr::mpreal(x), order));
+            auto bak = save_default_prec();
+            auto r = static_cast<double>(ulx_derivative_mp(l, mpfr::mpreal(x), order));
+            restore_default_prec(bak);
+            return r;
         }
 
         /**
@@ -111,13 +122,19 @@ namespace irlib {
         double vly(int l, double y) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
-            return static_cast<double>(vly_mp(l, mpfr::mpreal(y)));
+            auto bak = save_default_prec();
+            auto r = static_cast<double>(vly_mp(l, mpfr::mpreal(y)));
+            restore_default_prec(bak);
+            return r;
         }
 
         double vly_derivative(int l, double y, int order) const throw(std::runtime_error) {
             assert(y >= -1 && y <= 1);
             assert(l >= 0 && l < dim());
-            return static_cast<double>(vly_derivative_mp(l, mpfr::mpreal(y), order));
+            auto bak = save_default_prec();
+            auto r = static_cast<double>(vly_derivative_mp(l, mpfr::mpreal(y), order));
+            restore_default_prec(bak);
+            return r;
         }
 
 
@@ -177,7 +194,7 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(x >= -1 && x <= 1, "x must be in [-1,1].");
 
-            save_default_prec();
+            auto bak = save_default_prec();
 
             mpfr:mpreal r;
             if (x >= 0) {
@@ -186,7 +203,8 @@ namespace irlib {
                 r = u_basis_[l].compute_value(-x) * (l % 2 == 0 ? 1 : -1);
             }
 
-            restore_default_prec();
+            restore_default_prec(bak);
+
 
             return r;
         }
@@ -197,7 +215,7 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(x >= -1 && x <= 1, "x must be in [-1,1].");
 
-            save_default_prec();
+            auto bak = save_default_prec();
 
             mpfr::mpreal r;
             if (x >= 0) {
@@ -206,7 +224,7 @@ namespace irlib {
                 r = u_basis_[l].derivative(-x, order) * ((l+order) % 2 == 0 ? 1 : -1);
             }
 
-            restore_default_prec();
+            restore_default_prec(bak);
 
             return r;
         }
@@ -223,7 +241,7 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(y >= -1 && y <= 1, "y must be in [-1,1].");
 
-            save_default_prec();
+            auto bak = save_default_prec();
 
             mpfr::mpreal r;
             if (y >= 0) {
@@ -232,7 +250,7 @@ namespace irlib {
                 r = v_basis_[l].compute_value(-y) * (l % 2 == 0 ? 1 : -1);
             }
 
-            restore_default_prec();
+            restore_default_prec(bak);
 
             return r;
         }
@@ -243,7 +261,7 @@ namespace irlib {
             python_runtime_check(l >= 0 && l < dim(), "Index l is out of range.");
             python_runtime_check(y >= -1 && y <= 1, "y must be in [-1,1].");
 
-            save_default_prec();
+            auto bak = save_default_prec();
 
             mpfr::mpreal r;
             if (y >= 0) {
@@ -252,29 +270,40 @@ namespace irlib {
                 r = v_basis_[l].derivative(-y, order) * ((l+order) % 2 == 0 ? 1 : -1);
             }
 
-            restore_default_prec();
+            restore_default_prec(bak);
 
             return r;
         }
 #endif
 
         std::string ulx_str(int l, const std::string& str_x) const throw(std::runtime_error) {
+            auto bak = save_default_prec();
+
             auto prec = u_basis_[l].section_edge(0).get_prec();
             mpfr::mpreal x(str_x, prec);
             auto ulx = ulx_mp(l, x);
 
             std::ostringstream out;
             out << std::setprecision(mpfr::bits2digits(ulx.get_prec())) << ulx;
+            //std::cout << "debug ulx_str " << std::setprecision(20) << str_x << " " << x << " " << ulx << " " << out.str() << std::endl;
+
+            restore_default_prec(bak);
+
             return out.str();
         }
 
         std::string vly_str(int l, const std::string& str_y) const throw(std::runtime_error) {
+            auto bak = save_default_prec();
+
             auto prec = v_basis_[l].section_edge(0).get_prec();
             mpfr::mpreal y(str_y, prec);
             auto vly = vly_mp(l, y);
 
             std::ostringstream out;
             out << std::setprecision(mpfr::bits2digits(vly.get_prec())) << vly;
+
+            restore_default_prec(bak);
+
             return out.str();
         }
 
@@ -301,11 +330,12 @@ namespace irlib {
          */
         int dim() const { return u_basis_.size(); }
 
+
+#if !defined(SWIG) && !defined(SWIGPYTHON)  //DO NOT EXPOSE TO PYTHON
         mpfr_prec_t get_prec() const {
             return ul(0).section_edge(0).get_prec();
         }
 
-#if !defined(SWIG) && !defined(SWIGPYTHON)  //DO NOT EXPOSE TO PYTHON
         /// Return statistics
         irlib::statistics::statistics_type get_statistics() const {
             return statistics_;
@@ -313,6 +343,10 @@ namespace irlib {
 #endif
 
 #if defined(SWIG) || defined(SWIGPYTHON) //PYTHON
+        int get_prec() const {
+            return static_cast<int>(ul(0).section_edge(0).get_prec());
+        }
+
         std::string get_statistics() const {
             return statistics_ == statistics::FERMIONIC ? "F" : "B" ;
         }
@@ -330,7 +364,7 @@ namespace irlib {
                 const std::vector<long> &n_vec,
                 Eigen::Tensor<std::complex<double>, 2> &Tnl
         ) const {
-            save_default_prec();
+            auto bak = save_default_prec();
 
             auto trans_to_non_negative = [&](long n) {
                 if (n >= 0) {
@@ -374,7 +408,7 @@ namespace irlib {
                 }
             }
 
-            restore_default_prec();
+            restore_default_prec(bak);
         }
 
 #endif

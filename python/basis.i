@@ -51,10 +51,10 @@ from mpmath import *
 
 %extend irlib::basis {
     %pythoncode %{
-        def ulx_mp(self, l, x):
-            return mpf(self.ulx_str(l, str(x)))
+        #def ulx_mp(self, l, x):
+            #return mpf(self.ulx_str(l, str(x)))
 
-        def vly_mp(self, l, y):
-            return mpf(self.vly_str(l, str(y)))
+        #def vly_mp(self, l, y):
+            #return mpf(self.vly_str(l, str(y)))
     %}
 }
