@@ -705,7 +705,9 @@ namespace irlib {
         auto iw = std::complex<T>(0.0, w);
         auto exp0 = exp(iw*(x0+1));
         auto exp1 = exp(iw*(x1+1));
+        auto exp10 = exp(iw*(x1-x0));
         Ik[0] = (exp1 - exp0)/iw;
+        //Ik[0] = (exp10 - 1) * exp0 /iw;
 
         auto dx_k = dx;
         for (int k=1; k<K+1; ++k) {

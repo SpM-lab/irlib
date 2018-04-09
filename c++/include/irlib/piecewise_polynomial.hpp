@@ -282,16 +282,16 @@ namespace irlib {
             return compute_value<Tw>(x, find_section(x));
         }
 
-        inline Tx derivative(Tx x, int order) const {
+        inline Tx derivative(Tx x, int order, int section = -1) const {
 #ifndef NDEBUG
             check_validity();
 #endif
-            int section = find_section(x);
-            auto dx = x - section_edges_[section];
+            int section_eval = section >= 0 ? section : find_section(x);
+            auto dx = x - section_edges_[section_eval];
 
             std::vector<T> coeff_deriv(k_+1, 0.0);
             for (int p = 0; p < k_+1; ++p) {
-                coeff_deriv[p] = coeff_(section, p);
+                coeff_deriv[p] = coeff_(section_eval, p);
             }
 
             for (int m=0; m<order; ++m) {
