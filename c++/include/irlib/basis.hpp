@@ -331,7 +331,6 @@ namespace irlib {
         int dim() const { return u_basis_.size(); }
 
 
-#if !defined(SWIG) && !defined(SWIGPYTHON)  //DO NOT EXPOSE TO PYTHON
         mpfr_prec_t get_prec() const {
             return ul(0).section_edge(0).get_prec();
         }
@@ -340,17 +339,14 @@ namespace irlib {
         irlib::statistics::statistics_type get_statistics() const {
             return statistics_;
         }
-#endif
 
-#if defined(SWIG) || defined(SWIGPYTHON) //PYTHON
-        int get_prec() const {
-            return static_cast<int>(ul(0).section_edge(0).get_prec());
-        }
-
-        std::string get_statistics() const {
+        std::string get_statistics_str() const {
             return statistics_ == statistics::FERMIONIC ? "F" : "B" ;
         }
-#endif
+
+        int get_prec_int() const {
+            return static_cast<int>(ul(0).section_edge(0).get_prec());
+        }
 
 #ifndef SWIG //DO NOT EXPOSE TO PYTHON
 
