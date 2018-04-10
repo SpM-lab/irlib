@@ -509,6 +509,10 @@ namespace irlib {
     inline basis loadtxt(const std::string& fname) throw(std::runtime_error) {
         std::ifstream ifs(fname);
 
+        if (!ifs.is_open()) {
+            throw std::runtime_error(fname + " cannot be opened!");
+        }
+
         statistics::statistics_type s;
         double Lambda;
         int dim;
