@@ -19,9 +19,10 @@ ls = ['-', '--', ':']
 colors = ['r', 'b', 'g', 'k']
 for Lambda in [10000.0]:
     #print("Loading basis functions...")
-    b = irlib.loadtxt("np10/basis_f-mp-Lambda"+str(Lambda)+".txt")
+    b = irlib.loadtxt("np8/basis_f-mp-Lambda"+str(Lambda)+".txt")
 
     print("dim = ", b.dim())
+    print("ns = ", b.num_sections_ulx())
 
     plt.figure(1)
     for l in [b.dim()-1]:
@@ -35,11 +36,16 @@ for Lambda in [10000.0]:
     plt.plot([b.sl(l)/b.sl(0) for l in range(b.dim())], marker='+', linestyle='-', color=colors[idx])
 
     plt.figure(4)
-    nvec = numpy.array([0, 1, 10, 20,30,40,50,60,70,80,90,10**2, 10**3, 10**4, 10**5, 10**6, 10**7, 10**8])
-    #nvec = numpy.arange(100)
+    #nvec = numpy.array([0, 1, 10, 20,30,40,50,60,70,80,90,10**2, 10**3, 10**4, 10**5, 10**6, 10**7, 10**8])
+    nvec = numpy.arange(100)
     Tnl = b.compute_Tnl(nvec)
     for l in [b.dim()-1]:
-        plt.plot(nvec, numpy.abs(Tnl[:,l]), marker='x', linestyle='-', color='r', label='l='+str(l))
+        #plt.plot(nvec, numpy.abs(Tnl[:,l]), marker='x', linestyle='-', color='r', label='l='+str(l))
+        print(Tnl[:,l])
+        Tnl_new = numpy.array([b.compute_Tnl_safe(int(n), l) for n in nvec])
+        print(Tnl_new)
+        plt.plot(nvec, Tnl_new.imag, marker='x', linestyle='-', color='r', label='l='+str(l))
+        plt.plot(nvec, Tnl[:,l].imag, marker='o', linestyle='-', color='r', label='l='+str(l))
 
     idx += 1
 
@@ -72,7 +78,7 @@ plt.xlabel('$n$')
 plt.ylabel('$T_{nl}$')
 plt.legend()
 plt.xscale("log")
-#plt.ylim([-0.2,0.2])
-plt.yscale("log")
+plt.ylim([-0.2,0.2])
+#plt.yscale("log")
 plt.tight_layout()
 plt.savefig('Tnl.pdf')

@@ -7,6 +7,7 @@
 using namespace irlib;
 %}
 
+%include "stdint.i"
 %include "std_string.i"
 %include "std_vector.i"
 %include "../common/swig/numpy.i"

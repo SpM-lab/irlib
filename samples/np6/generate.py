@@ -10,7 +10,7 @@ cutoff = 1e-8
 r_tol = 1e-8
 verbose = True
 prec = 64
-n_local_poly = 6
+n_local_poly = 20
 n_gl_node = 24
 
 ## Construct basis

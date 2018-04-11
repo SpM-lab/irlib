@@ -23,6 +23,12 @@ namespace irlib {
         return M_PI;
     }
 
+    inline std::complex<mpreal> my_exp(const mpreal& z_img) {
+        return std::complex<mpreal>(
+                mpfr::cos(z_img), mpfr::sin(z_img)
+        );
+    }
+
     template<typename mp_type>
     std::vector<std::pair<mp_type, mp_type> >
     composite_gauss_legendre_nodes(
@@ -1081,6 +1087,136 @@ namespace irlib {
         }
 
         return std::make_pair(nodes_x, nodes_y);
+    }
+
+/**
+ *  Compute \int_{-1}^1 dx exp(i w x) p(x)
+**/
+/*
+    inline std::vector<std::complex<mpfr::mpreal>>
+    compute_Tnl_impl(const std::vector<piecewise_polynomial<mpreal,mpreal>>& p,
+                                                       std::vector<mpreal>& w_vec,
+                                                       int digits) {
+        auto prec_bak = mpfr::mpreal::get_default_prec();
+
+        mpfr::mpreal::set_default_prec(mpfr::digits2bits(digits));
+
+        int num_local_nodes = 24;
+        auto local_nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
+        std::vector<mpreal> section_edges = p.section_edges();
+        auto global_nodes = composite_gauss_legendre_nodes(section_edges, local_nodes);
+        auto n_local_nodes = local_nodes.size();
+
+        std::vector<mpreal> values(global_nodes.size());
+        for (int n=0; n<global_nodes.(); ++n) {
+            values[n] = p.compute_value(global_nodes[n].first);
+        }
+
+        auto num_sections = p.num_sections();
+        auto n_poly = p.order()+1;
+        std::vector<mpreal> deriv_values_left(num_sections*n_poly), deriv_values_left(num_sections*n_poly);
+        for (int s=0; s<num_sections; s++) {
+            for (int k=0; k<n_poly; ++k) {
+                deriv_values_left[k + s*n_poly] = p.derivative(p.section_edge(s), k, s);
+                deriv_values_right[k + s*n_poly] = p.derivative(p.section_edge(s+1), k, s);
+            }
+        }
+
+        std::vector<std::complex<mpreal>> result(w_vec.size());
+        for (int i=0; i < w_vec.size(); ++i) {
+            result[i] = 0;
+
+            for (int s = 0; s < p.num_sections(); ++s) {
+                mpreal x0 = p.section_edge(s);
+                mpreal x1 = p.section_edge(s+1);
+
+                if (w * (x1-x0) < 0.1 * const_pi<mpreal>()){
+                    std::complex<mpreal> tmp(0);
+                    for (int n = 0; n < n_local_nodes; ++n) {
+                        tmp += values(s*n_local_nodes + n) * my_exp(w*x_smpl) * global_nodes[s*n_local_nodes + n].second;
+                    }
+                    result[i] += tmp;
+                } else {
+                    std::complex<mpreal> Jk(0, 0);
+                    std::complex<mpreal> iw(0, w);
+                    std::complex<mpreal> exp0 = my_exp(w*x0);
+                    std::complex<mpreal> exp_tmp = my_exp(w*(x1-x0));
+
+                    //p contains x^0, x^1, xj^2, ..., x^K (K = p.order())
+                    for (int k=p.order(); k >= 0; --k) {
+                        mpreal f0 = deriv_values_left[k + s*n_poly];
+                        mpreal f1 = deriv_values_right[k + s*n_poly];
+                        Jk = ((exp_tmp * f1 - f0) * exp0 - Jk)/iw;
+                    }
+                    result[i] += Jk;
+                }
+            }
+
+            if (even) {
+                result[i] = mpfr::sqrt(2) * result[i].real() * my_exp(w);
+            } else {
+                result[i] = mpfr::sqrt(2) * std::complex<mpreal>(0, result[i].imag()) * my_exp(w);
+            }
+        }
+
+        mpfr::mpreal::set_default_prec(prec_bak);
+
+        return result;
+    }
+    */
+
+/**
+ *  Compute \int_{-1}^1 dx exp(i w x) p(x)
+**/
+    inline std::complex<mpfr::mpreal> compute_Tnl_impl(const piecewise_polynomial<mpreal,mpreal>& p, bool even, mpreal w,
+                                                       int digits_A = 30, int digits_B = 30) {
+        auto prec_bak = mpfr::mpreal::get_default_prec();
+
+        int num_local_nodes = 24;
+        auto local_nodes = detail::gauss_legendre_nodes<mpreal>(num_local_nodes);
+        std::vector<mpreal> section_edges = p.section_edges();
+        auto global_nodes = composite_gauss_legendre_nodes(section_edges, local_nodes);
+        auto n_local_nodes = local_nodes.size();
+
+        std::complex<mpreal> result(0);
+        for (int s = 0; s < p.num_sections(); ++s) {
+            mpreal x0 = p.section_edge(s);
+            mpreal x1 = p.section_edge(s+1);
+
+            if (w * (x1-x0) < 0.1 * const_pi<mpreal>()){
+                mpfr::mpreal::set_default_prec(mpfr::digits2bits(digits_A));
+                std::complex<mpreal> tmp(0);
+                for (int n = 0; n < n_local_nodes; ++n) {
+                    auto x_smpl = global_nodes[s*n_local_nodes + n].first;
+                    tmp += p.compute_value(x_smpl) * my_exp(w*x_smpl) * global_nodes[s*n_local_nodes + n].second;
+                }
+                result += tmp;
+            } else {
+                mpfr::mpreal::set_default_prec(mpfr::digits2bits(digits_B));
+                std::complex<mpreal> Jk(0, 0);
+                std::complex<mpreal> iw(0, w);
+                std::complex<mpreal> exp0 = my_exp(w*x0);
+                std::complex<mpreal> exp_tmp = my_exp(w*(x1-x0));
+
+                //p contains x^0, x^1, xj^2, ..., x^K (K = p.order())
+                for (int k=p.order(); k >= 0; --k) {
+                    mpreal f0 = p.derivative(x0, k, s);
+                    mpreal f1 = p.derivative(x1, k, s);
+                    Jk = ((exp_tmp * f1 - f0) * exp0 - Jk)/iw;
+                }
+                result += Jk;
+            }
+        }
+
+        if (even) {
+            result = mpfr::sqrt(2) * result.real() * my_exp(w);
+        } else {
+            result = mpfr::sqrt(2) * std::complex<mpreal>(0, result.imag()) * my_exp(w);
+        }
+
+        mpfr::mpreal::set_default_prec(prec_bak);
+
+        return result;
     }
 
 }
