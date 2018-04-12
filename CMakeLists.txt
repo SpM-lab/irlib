@@ -1,6 +1,6 @@
 ### fastupdate cmake configuration
 
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required (VERSION 3.8)
 
 # use only CXX compiler
 project (irlib CXX)
@@ -24,7 +24,7 @@ message(STATUS "Redifine CMAKE_INSTALL_PREFIX if you wish to change install loca
 message(STATUS "BUILDDOC" ${BUILD_DOCUMENTATION})
 
 ### Dependencies
-find_package(MPFR 3.0.0 REQUIRED)
+find_package(MPFR 2.4.0 REQUIRED)
 find_package(GMP REQUIRED) #TO DO: version check (>=4.2.1) & MPIR support
 if (BUILD_DOCUMENTATION)
   find_package(Doxygen REQUIRED)
