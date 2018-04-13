@@ -174,11 +174,11 @@ namespace irlib {
         }
 
         int num_local_poly_ulx() const {
-            return u_basis_[0].order();
+            return u_basis_[0].order() + 1;
         }
 
         int num_local_poly_vly() const {
-            return v_basis_[0].order();
+            return v_basis_[0].order() + 1;
         }
 
         /**
