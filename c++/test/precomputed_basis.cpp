@@ -31,18 +31,6 @@ TEST(precomputed_basis, double_precision) {
         auto diff = basis_vectors_org[l].template compute_value<mpreal>(x) - basis_vectors_org[l].template compute_value<double>(x);
         ASSERT_TRUE(std::abs(static_cast<double>(diff)) < 1e-10);
     }
-
-    /*
-    auto basis_vectors_cs =  cspline_approximation(basis_vectors_org, 1e-8);
-
-    for (int l=0; l<dim; ++l) {
-        for (auto x : xvec) {
-            auto diff = basis_vectors_org[l].compute_value(x) -  basis_vectors_cs[l].compute_value(x);
-            std::cout << " diff " << l << " " << x << " " << diff << std::endl;
-            ASSERT_TRUE(std::abs(static_cast<double>(diff)) < 1e-5);
-        }
-    }
-    */
 }
 
 
@@ -91,15 +79,9 @@ TEST(precomputed_basis, Tnl) {
             }
             Tnl_ref(index_n,l) = to_dcomplex(r);
 
-            std::complex<mpreal> Tnl_new = compute_Tnl_impl(b.ul(l), l%2==0, mpfr::const_pi() * 0.5 * o);
+            std::complex<mpreal> Tnl_new = compute_Tnl_impl(b.ul(l), l%2==0, irlib::statistics::FERMIONIC, mpfr::const_pi() * 0.5 * o);
             std::complex<double> Tnl_safe = b.compute_Tnl_safe(n, l);
 
-            /*
-            std::cout << " n " << n << " l " << l << " " << std::abs(to_dcomplex(r)-Tnl(index_n,l))/std::abs(Tnl(index_n,l))
-                      << "      " << r.real() << " " << r.imag() << "    " << Tnl(index_n,l).real() << " " << Tnl(index_n,l).imag()
-                      << "      " << Tnl_new.real() << " " << Tnl_new.imag()
-                      << std::endl;
-                      */
             ASSERT_TRUE(std::abs(to_dcomplex(r)-Tnl(index_n,l))/std::abs(Tnl(index_n,l)) < 1e-5);
             ASSERT_TRUE(std::abs(to_dcomplex(Tnl_new)-Tnl(index_n,l))/std::abs(Tnl(index_n,l)) < 1e-5);
             ASSERT_TRUE(std::abs(to_dcomplex(Tnl_new)-Tnl_safe)/std::abs(Tnl_safe) < 1e-10);
@@ -107,14 +89,64 @@ TEST(precomputed_basis, Tnl) {
         ++ index_n;
     }
 
+    // check tail
     /*
-    for (auto n : std::vector<long>{0,1,10,100,1000,10000,100000, 1000000, 10000000}) {
+    for (auto n : std::vector<long>{1000000000}) {
         auto o = 2*n+1;
+        auto w = mpfr::const_pi() * 0.5 * o;
         auto l = b.dim()-1;
-        auto Tnl = compute_Tnl_impl(b.ul(l), l%2==0, mpfr::const_pi() * 0.5 * o, 15, 15);
-        auto Tnl3 = compute_Tnl_impl(b.ul(l), l%2==0, mpfr::const_pi() * 0.5 * o, 20, 20);
+        auto Tnl3 = b.compute_Tnl_safe(n, l);
     }
-     */
+    */
 
 }
 
+TEST(precomputed_basis, derivatives) {
+    using namespace irlib;
+
+    for (auto s : std::vector<statistics::statistics_type>{statistics::FERMIONIC, statistics::BOSONIC}) {
+        std::string str_s = s == statistics::FERMIONIC ? "f" : "b";
+        auto b_np8 = loadtxt("./samples/np8/basis_"+str_s+"-mp-Lambda10000.0.txt");
+        auto b_np10 = loadtxt("./samples/np10/basis_"+str_s+"-mp-Lambda10000.0.txt");
+        auto dim = b_np8.dim();
+
+        for (int order = 0; order <= 2; ++order) {
+            auto rat = b_np8.ulx_derivative(dim-1, 1.0, order)/b_np10.ulx_derivative(dim-1, 1.0, order);
+            //std::cout << str_s << order << " " << rat-1 << std::endl;
+            ASSERT_NEAR(rat, 1.0, 1e-8);
+        }
+    }
+}
+
+TEST(precomputed_basis, Tnl_high_freq_limit) {
+    using namespace irlib;
+
+    for (auto s : std::vector<statistics::statistics_type>{statistics::FERMIONIC, statistics::BOSONIC}) {
+        std::string str_s = (s == statistics::FERMIONIC ? "f" : "b");
+        auto b = loadtxt("./samples/np8/basis_"+str_s+"-mp-Lambda10000.0.txt");
+        auto dim = b.dim();
+
+        long n = 1E+10;
+        double shift = (s == statistics::FERMIONIC ? 0.5 : 0.0);
+
+        int sign_s = (s == statistics::FERMIONIC ? -1 : 1);
+
+        for (int l = 0; l < dim; ++l) {
+            std::complex<double> Tnl_safe = b.compute_Tnl_safe(n, l);
+            std::complex<double> Tnl_ref = 0.0;
+            std::complex<double> fact = static_cast<double>(sign_s)/std::complex<double>(0.0, M_PI * (n + shift));
+
+            std::complex<double> ztmp = fact;
+            for (int m=0; m < 2; ++m) {
+                int sign_lm = ((l+m)%2 == 0 ? 1 : -1);
+                Tnl_ref += ztmp * static_cast<double>(1 - sign_s * sign_lm) * b.ulx_derivative(l, 1.0, m);
+                ztmp *= fact;
+            }
+            Tnl_ref /= std::sqrt(2.0);
+
+            //std::cout << " " << l << " " << Tnl_safe << " " << Tnl_ref << " " << std::abs(Tnl_safe/Tnl_ref) << std::endl;
+            ASSERT_NEAR(std::abs(Tnl_safe/Tnl_ref), 1.0, 1e-8);
+        }
+
+    }
+}

@@ -1165,10 +1165,37 @@ namespace irlib {
     }
     */
 
+
+    inline std::complex<mpreal> compute_Tnl_tail(const piecewise_polynomial<mpreal,mpreal>& p,
+                                   mpreal w,
+                                   bool l_even,
+                                   irlib::statistics::statistics_type s,
+                                   int num_deriv) {
+        int sign_s = (s == irlib::statistics::BOSONIC ? 1 : -1);
+
+        if (w == 0.0) {
+            throw std::runtime_error("Error zero frequency");
+        }
+
+        std::complex<mpreal> result(0);
+        std::complex<mpreal> fact(0, 1/w);
+        std::complex<mpreal> coeff(fact);
+        int sign_l = l_even ? 1 : -1;
+        for (int m = 0; m < num_deriv; ++m) {
+            int sign_m = m%2 == 0 ? 1 : -1;
+            int sign_lm = sign_l * sign_m;
+            result += -static_cast<mpreal>(sign_s) * coeff * static_cast<mpreal>(1 - sign_s * sign_lm) * p.derivative(1, m);
+            coeff *= fact;
+        }
+
+        return result/mpfr::sqrt(2);
+    }
+
 /**
  *  Compute \int_{-1}^1 dx exp(i w x) p(x)
 **/
-    inline std::complex<mpfr::mpreal> compute_Tnl_impl(const piecewise_polynomial<mpreal,mpreal>& p, bool even, mpreal w,
+    inline std::complex<mpfr::mpreal> compute_Tnl_impl(const piecewise_polynomial<mpreal,mpreal>& p, bool even,
+                                                       irlib::statistics::statistics_type s, mpreal w,
                                                        int digits_A = 30, int digits_B = 30) {
         auto prec_bak = mpfr::mpreal::get_default_prec();
 
@@ -1184,6 +1211,7 @@ namespace irlib {
             mpreal x1 = p.section_edge(s+1);
 
             if (w * (x1-x0) < 0.1 * const_pi<mpreal>()){
+                // using low-frequency formula (Gauss-Legendre quadrature)
                 mpfr::mpreal::set_default_prec(mpfr::digits2bits(digits_A));
                 std::complex<mpreal> tmp(0);
                 for (int n = 0; n < n_local_nodes; ++n) {
@@ -1192,6 +1220,7 @@ namespace irlib {
                 }
                 result += tmp;
             } else {
+                // using low-frequency formula (Gauss-Legendre quadrature)
                 mpfr::mpreal::set_default_prec(mpfr::digits2bits(digits_B));
                 std::complex<mpreal> Jk(0, 0);
                 std::complex<mpreal> iw(0, w);
@@ -1212,6 +1241,16 @@ namespace irlib {
             result = mpfr::sqrt(2) * result.real() * my_exp(w);
         } else {
             result = mpfr::sqrt(2) * std::complex<mpreal>(0, result.imag()) * my_exp(w);
+        }
+
+        // replace with tail
+        if (w != 0.0) {
+            int num_deriv = p.order()+1;
+            auto tail_full = compute_Tnl_tail(p, w, even, s, num_deriv);
+            auto tail_two_less = compute_Tnl_tail(p, w, even, s, num_deriv-2);
+            if (std::abs((tail_full-tail_two_less)/tail_full) < 1e-12) {
+                result = tail_full;
+            }
         }
 
         mpfr::mpreal::set_default_prec(prec_bak);
