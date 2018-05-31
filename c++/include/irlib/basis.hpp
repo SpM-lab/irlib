@@ -445,7 +445,7 @@ namespace irlib {
                         int max_dim = 1000,
                         double cutoff = 1e-8,
                         const std::string& fp_mode="mp",
-                        double r_tol = 1e-6,
+                        double r_tol = 1e-8,
                         long prec = 64,
                         int n_local_poly = 10,
                         int num_nodes_gauss_legendre = 24,

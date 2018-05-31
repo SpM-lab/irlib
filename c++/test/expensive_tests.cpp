@@ -346,8 +346,9 @@ TEST_P(TestAllStatistics, HighT) {
         //construct ir basis
         const double Lambda = 0.01;//high T
         const int max_dim = 100;
-        basis b = compute_basis(GetParam(), Lambda, max_dim);
-        ASSERT_TRUE(b.dim() > 3);
+        const double cutoff = 1e-8;
+        basis b = compute_basis(GetParam(), Lambda, max_dim, cutoff);
+        ASSERT_TRUE(b.dim() >= 3);
 
         //IR basis functions should match Legendre polynomials
         const int N = 10;
@@ -420,7 +421,7 @@ class ExpansionByIRBasis : public testing::Test {
 
 TEST(ExpansionByIRBasis, AllBasisTypes) {
     using accurate_fp_type = mpfr::mpreal;
-    double cutoff = 1e-8;
+    double cutoff = 1e-9;
     int max_dim = 1000;
 
     for (auto fp_mode : std::vector<std::string>{"mp"}) {
@@ -489,7 +490,7 @@ TEST(ExpansionByIRBasis, AllBasisTypes) {
                 for (int l = 0; l < b.dim(); ++l) {
                     auto f = [&](const accurate_fp_type &x) { return accurate_fp_type(gx(x) * b.ulx_mp(l, x)); };
                     coeff[l] = static_cast<double>(
-                            irlib::integrate_gauss_legendre<accurate_fp_type, accurate_fp_type>(section_edges, f, 12) *
+                            irlib::integrate_gauss_legendre<accurate_fp_type, accurate_fp_type>(section_edges, f, 24) *
                             beta / std::sqrt(2.0));
                 }
 
