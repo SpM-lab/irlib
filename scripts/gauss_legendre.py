@@ -23,12 +23,12 @@ inline S stoscalar(const std::string& s);
 
 template<>
 inline double stoscalar<double>(const std::string& s) {
-   return std::stof(s);
+   return std::stod(s);
 }
 
 template<>
 inline long double stoscalar<long double>(const std::string& s) {
-   return std::stof(s);
+   return std::stold(s);
 }
 
 template<>
