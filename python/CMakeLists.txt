@@ -69,6 +69,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/piecewise_polynomial.py DESTINATION ${
 #configure_file(${CMAKE_SOURCE_DIR}/common/cmake/sitecustomize.py ${CMAKE_CURRENT_BINARY_DIR}/sitecustomize.py @ONLY)
 
 
-if (Testing)
-  add_subdirectory("test")
-endif()
+#if (Testing)
+#add_subdirectory("test")
+#endif()
