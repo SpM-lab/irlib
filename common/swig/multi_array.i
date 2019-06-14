@@ -80,9 +80,9 @@
       bool dynamic_col = ColsAtCompileTime == Eigen::Dynamic;
       if (dynamic_row && dynamic_col) {
         //dynamic matrix
-        obj.resize(sizes[0], size[1]);
+        obj.resize(sizes[0], sizes[1]);
       } else if (!dynamic_row && !dynamic_col) {
-        if (RowsAtCompileTime == size[0] && ColsAtCompileTime == size[1]) {
+        if (RowsAtCompileTime == sizes[0] && ColsAtCompileTime == sizes[1]) {
           return true;
         }
         return false;
