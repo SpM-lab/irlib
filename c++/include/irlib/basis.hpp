@@ -427,15 +427,23 @@ namespace irlib {
             auto bak = save_default_prec();
 
             auto o = (statistics_ == irlib::statistics::FERMIONIC ? 2*n+1 : 2*n);
-            auto r = to_dcomplex(
-                    compute_Tnl_impl(u_basis_[l], l%2==0, statistics_, mpfr::const_pi() * 0.5 * o,
-                                    mpfr::digits2bits(get_prec()),
-                                    mpfr::digits2bits(get_prec()))
-            );
-
-            restore_default_prec(bak);
-
-            return r;
+            if (o >= 0) {
+                auto r = to_dcomplex(
+                        compute_Tnl_impl(u_basis_[l], l%2==0, statistics_, mpfr::const_pi() * 0.5 * o,
+                                        mpfr::digits2bits(get_prec()),
+                                        mpfr::digits2bits(get_prec()))
+                );
+                restore_default_prec(bak);
+                return r;
+            } else {
+                auto r = to_dcomplex(
+                        compute_Tnl_impl(u_basis_[l], l%2==0, statistics_, -mpfr::const_pi() * 0.5 * o,
+                                        mpfr::digits2bits(get_prec()),
+                                        mpfr::digits2bits(get_prec()))
+                );
+                restore_default_prec(bak);
+                return std::conj(r);
+            }
         }
 
     };
