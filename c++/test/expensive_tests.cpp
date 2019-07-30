@@ -150,7 +150,9 @@ TEST(kernel, basis_functions) {
 
     std::vector<mpreal> sv;
     std::vector<pp_type> u_basis, v_basis;
-    std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpreal>(kernel, max_dim, 1e-12);
+    std::vector<std::vector<mpreal>> u_basis_coeff_l;
+    std::vector<std::vector<mpreal>> v_basis_coeff_l;
+    std::tie(sv, u_basis, v_basis, u_basis_coeff_l, v_basis_coeff_l) = generate_ir_basis_functions<mpreal>(kernel, max_dim, 1e-12);
 
     // Check singular values
     ASSERT_NEAR(static_cast<double>(sv[0]), 0.205608636, 1e-8);
