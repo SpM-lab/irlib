@@ -220,7 +220,9 @@ namespace irlib {
     std::tuple<
             std::vector<mpreal>,
             std::vector<piecewise_polynomial<mpreal,mpreal>>,
-            std::vector<piecewise_polynomial<mpreal,mpreal>>
+            std::vector<piecewise_polynomial<mpreal,mpreal>>,
+            std::vector<std::vector<mpreal>>,
+            std::vector<std::vector<mpreal>>
     >
     generate_ir_basis_functions_impl(
             const KernelType &kernel,
@@ -340,10 +342,37 @@ namespace irlib {
         auto u_basis_pp = gen_pp(section_edges_x, Uvec);
         auto v_basis_pp = gen_pp(section_edges_y, Vvec);
 
+        auto dim = u_basis_pp.size();
         for (int i = 0; i < u_basis_pp.size(); ++i) {
             if (u_basis_pp[i].compute_value(1) < 0) {
                 u_basis_pp[i] = mpreal(-1.0) * u_basis_pp[i];
                 v_basis_pp[i] = mpreal(-1.0) * v_basis_pp[i];
+                //std::transform(Uvec[i].begin(), Uvec[i].end(), Uvec[i].begin(), [](const mpreal& x){return -x;});
+                //std::transform(Vvec[i].begin(), Vvec[i].end(), Vvec[i].begin(), [](const mpreal& x){return -x;});
+                Uvec[i] *= -1;
+                Vvec[i] *= -1;
+            }
+        }
+
+        // Normalization on [-1, 1]
+        for (int i = 0; i < dim; ++i) {
+            Uvec[i] /= sqrt(mpreal("2.0"));
+            Vvec[i] /= sqrt(mpreal("2.0"));
+        }
+
+        std::vector<std::vector<mpreal>> uvec_coeffs_leg(dim);
+        for (int i = 0; i < dim; ++i) {
+            uvec_coeffs_leg[i].resize(Uvec[i].size());
+            for (int c=0; c<Uvec[i].size(); ++c) {
+                uvec_coeffs_leg[i][c] = Uvec[i][c];
+            }
+        }
+
+        std::vector<std::vector<mpreal>> vvec_coeffs_leg(dim);
+        for (int i = 0; i < dim; ++i) {
+            vvec_coeffs_leg[i].resize(Vvec[i].size());
+            for (int c=0; c<Vvec[i].size(); ++c) {
+                vvec_coeffs_leg[i][c] = Vvec[i][c];
             }
         }
 
@@ -377,14 +406,16 @@ namespace irlib {
             }
         }
 
-        return std::make_tuple(sv, u_basis_pp, v_basis_pp);
+        return std::make_tuple(sv, u_basis_pp, v_basis_pp, uvec_coeffs_leg, vvec_coeffs_leg);
     }
 
     template<typename ScalarType, typename KernelType>
     std::tuple<
             std::vector<mpreal>,
             std::vector<piecewise_polynomial<mpreal,mpreal>>,
-            std::vector<piecewise_polynomial<mpreal,mpreal>>
+            std::vector<piecewise_polynomial<mpreal,mpreal>>,
+            std::vector<std::vector<mpreal>>,
+            std::vector<std::vector<mpreal>>
     >
     generate_ir_basis_functions(
             const KernelType &kernel,

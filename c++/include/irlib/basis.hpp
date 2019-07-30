@@ -38,13 +38,17 @@ namespace irlib {
             double Lambda,
             const std::vector<mpfr::mpreal> &sv,
             const std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> &u_basis,
-            const std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> &v_basis
+            const std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> &v_basis,
+            const std::vector<std::vector<mpfr::mpreal>> &u_basis_coeff_l,
+            const std::vector<std::vector<mpfr::mpreal>> &v_basis_coeff_l
         ) throw(std::runtime_error) {
             statistics_ = s;
             Lambda_ = Lambda;
             sv_ = sv;
             u_basis_ = u_basis;
             v_basis_ = v_basis;
+            u_basis_coeff_l_ = u_basis_coeff_l;
+            v_basis_coeff_l_ = v_basis_coeff_l;
         }
 
     private:
@@ -52,6 +56,8 @@ namespace irlib {
         double Lambda_;
         std::vector<mpfr::mpreal> sv_;
         std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> u_basis_, v_basis_;
+        std::vector<std::vector<mpfr::mpreal>> u_basis_coeff_l_;
+        std::vector<std::vector<mpfr::mpreal>> v_basis_coeff_l_;
 
         //mutable mp_prec_t default_prec_bak;
 
@@ -146,12 +152,22 @@ namespace irlib {
             return static_cast<double>(u_basis_[l].coefficient(section, p));
         }
 
+        std::vector<mpreal> coeff_ulx_leg(int l) const {
+            assert(l >= 0 && l < dim());
+            return u_basis_coeff_l_[l];
+        }
+
         /**
          * Direct access to coefficients of v_l(y)
          */
         double coeff_vly(int l, int section, int p) const {
             assert(l >= 0 && l < dim());
             return static_cast<double>(v_basis_[l].coefficient(section, p));
+        }
+
+        std::vector<mpreal> coeff_vly_leg(int l) const {
+          assert(l >= 0 && l < dim());
+          return v_basis_coeff_l_[l];
         }
 
         /**
@@ -462,6 +478,8 @@ namespace irlib {
         std::vector<mpfr::mpreal> sv;
         std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> u_basis;
         std::vector<piecewise_polynomial<mpfr::mpreal, mpfr::mpreal>> v_basis;
+        std::vector<std::vector<mpfr::mpreal>> u_basis_coeff_l;
+        std::vector<std::vector<mpfr::mpreal>> v_basis_coeff_l;
 
         // Increase default precision if needed
         auto min_prec = std::max(
@@ -479,34 +497,23 @@ namespace irlib {
 
         if (fp_mode == "mp") {
             if (s == statistics::FERMIONIC) {
-                std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpfr::mpreal>(
+                std::tie(sv, u_basis, v_basis, u_basis_coeff_l, v_basis_coeff_l) = generate_ir_basis_functions<mpfr::mpreal>(
                         fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
             } else if (s == statistics::BOSONIC) {
-                std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<mpfr::mpreal>(
-                        bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
-            }
-        } else if (fp_mode == "long double") {
-            if (cutoff < 1e-8) {
-                std::cout << "Warning : cutoff cannot be smaller than 1e-8 for long-double precision version. Please use fp_mode='mp'!" << std::endl;
-            }
-            if (s == statistics::FERMIONIC) {
-                std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<long double>(
-                        fermionic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
-            } else if (s == statistics::BOSONIC) {
-                std::tie(sv, u_basis, v_basis) = generate_ir_basis_functions<long double>(
+                std::tie(sv, u_basis, v_basis, u_basis_coeff_l, v_basis_coeff_l) = generate_ir_basis_functions<mpfr::mpreal>(
                         bosonic_kernel<mpfr::mpreal>(Lambda), max_dim, cutoff, verbose, r_tol, n_local_poly, num_nodes_gauss_legendre);
             }
         } else {
             throw std::runtime_error("Unknown fp_mode " + fp_mode + ". Only 'mp' is supported.");
         }
 
-        return basis(s, Lambda, sv, u_basis, v_basis);
+        return basis(s, Lambda, sv, u_basis, v_basis, u_basis_coeff_l, v_basis_coeff_l);
     }
 
     inline void savetxt(const std::string& fname, const basis& b) throw(std::runtime_error) {
         std::ofstream ofs(fname);
 
-        int version = 1;
+        int version = 2;
         ofs << version << std::endl;
         ofs << b.get_statistics() << std::endl;
         ofs << b.Lambda() << std::endl;
@@ -523,7 +530,24 @@ namespace irlib {
         for (int l=0; l<b.dim(); ++l) {
             ofs << b.vl(l);
         }
+        for (int l=0; l<b.dim(); ++l) {
+            auto coeffs = b.coeff_ulx_leg(l);
+            for (int c=0; c<coeffs.size(); ++c) {
+                ofs << coeffs[c] << std::endl;
+            }
+        }
+        for (int l=0; l<b.dim(); ++l) {
+            auto coeffs = b.coeff_vly_leg(l);
+            for (int c=0; c<coeffs.size(); ++c) {
+                ofs << coeffs[c] << std::endl;
+            }
+        }
     }
+
+    //inline void dump_coeff(std::ofstream& ofs, const std::vector<mpreal>& coeff) {
+      //auto num_sections = b.ul(l).num_sections();
+      //
+    //}
 
     inline basis loadtxt(const std::string& fname) throw(std::runtime_error) {
         std::ifstream ifs(fname);
@@ -539,7 +563,7 @@ namespace irlib {
         int version;
         ifs >> version;
 
-        if (version == 1) {
+        if (version == 2) {
             {
                 int itmp;
                 ifs >> itmp;
@@ -566,7 +590,23 @@ namespace irlib {
                 ifs >> v_basis[l];
             }
 
-            return basis(s, Lambda, sv, u_basis, v_basis);
+            std::vector<std::vector<mpreal>> u_basis_coeffs_leg(dim);
+            for (int l = 0; l < dim; ++l) {
+                u_basis_coeffs_leg[l].resize(u_basis[l].num_sections() * (u_basis[l].order()+1));
+                for (int c = 0; c < u_basis_coeffs_leg[l].size(); ++c) {
+                    ifs >> u_basis_coeffs_leg[l][c];
+                }
+            }
+
+            std::vector<std::vector<mpreal>> v_basis_coeffs_leg(dim);
+            for (int l = 0; l < dim; ++l) {
+                v_basis_coeffs_leg[l].resize(v_basis[l].num_sections() * (v_basis[l].order()+1));
+                for (int c = 0; c < v_basis_coeffs_leg[l].size(); ++c) {
+                    ifs >> v_basis_coeffs_leg[l][c];
+                }
+            }
+
+            return basis(s, Lambda, sv, u_basis, v_basis, u_basis_coeffs_leg, v_basis_coeffs_leg);
         } else {
             throw std::runtime_error("Version " + std::to_string(version) + " is not supported!");
         }
