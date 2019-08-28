@@ -1,5 +1,7 @@
 irlib
 ======
+**This "irlib" librarry is only for developers. Please use the "irbasis" library for practical calcultion.**
+
 Python library for generating "intermediate-representation" (ir) basis.
 Please refer to H. Shinaoka, J. Otsuki, M. Ohzeki and K. Yoshimi, PRB 96, 035147 (2017).
 The basis functions u_l(x) and v_l(y) are orthonormal on the interval [-1,1] with weight 1.
